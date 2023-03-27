@@ -1,0 +1,45 @@
+{
+    "comments": {
+        // symbol used for single line comment. Remove this entry if your language does not support line comments
+        "lineComment": "--",
+        // symbols used for start and end a block comment. Remove this entry if your language does not support block comments
+        "blockComment": [ "(*", "*)" ]
+    },
+    // symbols used as brackets
+    "brackets": [
+        ["{", "}"],
+        ["[", "]"],
+        ["(", ")"]
+    ],
+    // symbols that are auto closed when typing
+    "autoClosingPairs": [
+        ["{", "}"],
+        ["[", "]"],
+        ["(", ")"],
+        ["\"", "\""],
+        ["'", "'"]
+    ],
+    // characters that must be after the cursor for bracket or quote autoclosing to occur
+    // "autoCloseBefore": ";:.,=}]) \r\n\t",
+    // symbols that can be used to surround a selection
+    "surroundingPairs": [
+        ["{", "}"],
+        ["[", "]"],
+        ["(", ")"],
+        ["\"", "\""],
+        ["'", "'"]
+    ],
+    // the language's word definition
+    // "wordPattern": "-?[0-9]+|[a-zA-Z][a-zA-Z_0-9]*",
+    // the language's indentation settings
+    "indentationRules": {
+        // if a line matches this pattern, then all the lines after it should be indented once (until another rule matches)
+        // "increaseIndentPattern": "",
+        // if a line matches this pattern, then all the lines after it should be unindented once (until another rule matches)
+        // "decreaseIndentPattern": "",
+        // if a line matches this pattern, then **only the next line** after it should be indented once
+        // "indentNextLinePattern": "",
+        // if a line matches this pattern, then its indentation should not be changed and it should not be evaluated against the other rules
+        // "unIndentedLinePattern": ""
+    }
+}
