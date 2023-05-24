@@ -1,4 +1,4 @@
-export class AbstractScope<T> {
+export class AbstractScope<T> { //compare with Lama scope
   private readonly scope: {
     [identifier: string]: T
   }

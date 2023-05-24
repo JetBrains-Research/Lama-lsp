@@ -1,87 +1,77 @@
-import {SymbolTableVisitor as BaseVisitor} from "toy-kotlin-language-server";
-import {ParseTree, TerminalNode} from "antlr4ts/tree";
-import {ParserRuleContext} from "antlr4ts";
-import {RoutineSymbol, ScopedSymbol, SymbolTable, VariableSymbol, Symbol as BaseSymbol} from "antlr4-c3";
-import { LocationLink} from "vscode-languageserver";
-import {DocumentUri} from "vscode-languageserver-textdocument";
-import {
-    FunctionDeclarationContext,
-    VariableDeclarationContext
-} from "toy-kotlin-language-server/src/parser/KotlinParser";
+import {AbstractScope as Scope} from './scope'
+import {Position as UiPosition, Point as UiPoint} from 'unist'
+import {Range as VsRange, Position as VsPosition} from 'vscode-languageserver'
+import { CstNode, CstNodeLocation, IToken } from 'chevrotain';
+import { InterfaceItem } from './interface';
 
-export class SymbolTableVisitor extends BaseVisitor {
-
-    constructor(public documentUri: DocumentUri,
-                public symbolTable = new SymbolTable("", {}),
-                scope = symbolTable.addNewSymbolOfType(ScopedSymbol, undefined)) {
-        super(symbolTable, scope);
+export function findDefinition(name: string, scope: Scope<UiPosition>) { 
+    if(scope === undefined) {
+        return undefined;
     }
-
-    visitVariableDeclaration = (ctx: VariableDeclarationContext) => {
-        const symbol = this.symbolTable.addNewSymbolOfType(VariableSymbol, this.scope, ctx.simpleIdentifier().text);
-        this.registerDefinition(symbol, ctx, ctx.simpleIdentifier());
-        return this.visitChildren(ctx);
-    };
-
-    visitFunctionDeclaration = (ctx: FunctionDeclarationContext) => {
-        const fname = ctx.identifier();
-        return this.withDefinition(ctx, fname, RoutineSymbol, [fname.text],
-            () => this.visitChildren(ctx));
-    };
-
-    protected withDefinition<T>(
-        definition: ParseTree, definitionName: ParseTree,
-        type: { new(...args: any[]): ScopedSymbol }, args: any[], action: () => T): T {
-        return this.withScope(definition, type, args, () => {
-            this.registerDefinition(this.scope, definition, definitionName);
-            return action();
-        });
+    else {
+        return scope.get(name);  //not sure
     }
+}                                //COLLISIONS
 
-    protected registerDefinition(symbol: any, tree: ParseTree, definitionName: ParseTree) {
-        symbol.location = LocationLink.create(this.documentUri, getRange(tree), getRange(definitionName));
-    }
+export function PositionToRange (position: UiPosition) : VsRange {
+    const range = VsRange.create(
+        VsPosition.create(position.start.line - 1, position.start.column - 1),
+        /* PointToPosition(position.start), */
+        VsPosition.create(position.end.line - 1, position.end.column)
+        /* PointToPosition(position.end) */
+    );
+    return range;
 }
 
-export function getRange(parseTree: ParseTree) {
-    let start, stop;
-    if(parseTree instanceof ParserRuleContext) {
-        start = parseTree.start;
-        stop = parseTree.stop;
-    } else if(parseTree instanceof TerminalNode) {
-        start = stop = parseTree.symbol;
-    }
-    const endCharacter = stop.charPositionInLine + stop.text.length;
-    return {
-        start: { line: start.line - 1, character: start.charPositionInLine },
-        end: {   line: stop.line - 1,  character: endCharacter
+export function PointToPosition (point:UiPoint) : VsPosition {
+    const position = VsPosition.create(
+        point.line - 1,
+        point.column - 1
+    )
+    return position;
+}
+
+/* export function getNode (parseTree: CstNode, position: VsPosition): CstNode {
+    for(const key in parseTree.children) {
+        const node = parseTree.children[key];
+        for(let i = 0; i < node.length; i++) {
+            if('location' in node[i]) {
+                if(inside(position, node[i].location)) {
+                    return getNode (node[i], position);
+                }
+            }
         }
-    };
+    }
+    return parseTree;
+} */
+
+export function computeToken(node: any /* CstNode */, offset: number): any /* IToken | undefined */ {
+    for(const key in node.children) {
+        const element = node.children[key];
+        for(let i = 0; i < element.length; i++) {
+            if(element[i].hasOwnProperty("location") && inside(offset, element[i].location)) {
+                    return computeToken(element[i], offset);
+            }
+            else {
+                if(inside(offset, element[i]) && element[i].scope) {
+                    return element[i];
+                }
+            }
+        }
+    }
+    return undefined;
 }
 
-export function findDefinition(name: string, scope: BaseSymbol) {
-    while(scope && !(scope instanceof ScopedSymbol)) {
-        scope = scope.parent;
+function inside(offset: number, range: any/* CstNodeLocation | IToken */): Boolean {
+    if(range.endOffset) {
+        if(offset >= range.startOffset && offset <= range.endOffset) {
+            return true;
+        }
     }
-    if(!scope) {
-        return undefined;
-    }
-    const symbol = (scope as ScopedSymbol).getSymbolsOfType(BaseSymbol).find(s => s.name == name);
-    if(symbol && symbol.hasOwnProperty("location")) {
-        return symbol;
-    } else {
-        return findDefinition(name, scope.parent);
-    }
+    return false;
 }
 
-export function getScope(context: ParseTree, symbolTable: SymbolTable) {
-    if(!context) {
-        return undefined;
-    }
-    const scope = symbolTable.symbolWithContext(context);
-    if(scope) {
-        return scope;
-    } else {
-        return getScope(context.parent, symbolTable);
-    }
-}
+export const fictiveRange : VsRange = VsRange.create(
+    VsPosition.create(0,0),
+    VsPosition.create(0,5)
+)

@@ -12,9 +12,10 @@
 		"url": "https://github.com/Microsoft/vscode-extension-samples"
 	},
 	"dependencies": {
+		"@chevrotain/cst-dts-gen": "10.5.0",
 		"vscode-languageserver": "^8.1.0",
 		"vscode-languageserver-textdocument": "^1.0.8",
-		"chevrotain": "^7.0.1",
+		"chevrotain": "^10.5.0",
         "unist-builder": "^2.0.3"
 	},
 	"devDependencies": {

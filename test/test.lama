@@ -1,0 +1,2 @@
+public findme = 5;
+local notme = findme;

@@ -21,6 +21,17 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
+import {
+	LamaParser
+} from './parser';
+
+import { findDefinition, PositionToRange, fictiveRange, computeToken} from './go-to-definition';
+import { LocationLink, Location } from 'vscode-languageserver';
+
+import {
+	LamaVisitor, Scope
+} from './visitor'
+
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
@@ -130,10 +141,16 @@ documents.onDidClose(e => {
 	documentSettings.delete(e.document.uri);
 });
 
+/* function reparse(document: TextDocument) {
+	markForReparsing(document);
+	ensureParsed(document);
+} */
+
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	validateTextDocument(change.document);
+	//reparse(change.document);
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
@@ -224,10 +241,70 @@ connection.onCompletionResolve(
 	}
 );
 
-//tba
+//WIP                                                                      //3TODO - handling imports
 connection.onDefinition((params) => {
-    return undefined;
+	const uri = params.textDocument.uri;
+	const document = documents.get(uri);
+	if(document !== undefined) {
+		//const {parser, parseTree, visitor} = ensureParsed(document);    //4TODO - optimization with caching
+		const input = document.getText();       //not sure
+		const parser = new LamaParser();
+		const init_node = parser.parse(input);  //not sure
+		const visitor = new LamaVisitor(uri);
+		const init_scope = new Scope();
+		visitor.visit(init_node, init_scope);
+		const pos = params.position;
+		const offset = document.offsetAt(pos);
+		if(parser.lexingResult) {
+			//const node = getNode(init_node, pos);        // 1TODO - научиться вычислять токен на позиции курсора
+			const token = computeToken(init_node, offset);		 //1TODO - научиться получать scope токена
+			if(token && token.scope) {					                    
+				const definition = token.scope.get(token.image);           //mb автоматически из токена?
+				if(definition !== undefined) {
+					const targetSelectionRange = PositionToRange(definition);
+					const location = Location.create(uri, targetSelectionRange); //2TODO LocationLink[] - ??
+					return location;
+				}
+			}
+		}
+	}  
+	return undefined;
 });
+
+/* connection.onDefinition((params)=> {
+	const uri = params.textDocument.uri;
+	//const location = Location.create(uri, fictiveRange); --- crashed??
+	return undefined;
+}); */
+
+/* function markForReparsing(document: TextDocument) {
+	document["parser"] = undefined;
+	document["parseTree"] = undefined;
+	document["symbolTableVisitor"] = undefined;
+} */
+
+/*function ensureParsed(document: TextDocument) {
+	if(document["parser"]) {
+		return { parser: document["parser"], parseTree: document["parseTree"] , visitor: document["symbolTableVisitor"] };
+	}
+	const input = document.getText(); //не уверен, что сработает
+	const parser = new LamaParser();
+	const parseTree = parser.parse(input);//не уверен, что сработает
+	const symbolTableVisitor = new SymbolTableVisitor(document.uri); 
+
+	const imports = parseTree?.preamble()?.importList()?.importHeader();
+	if(imports) {
+		processImports(imports, symbolTableVisitor);
+	}
+	symbolTableVisitor.visit(parseTree);
+
+	document["parser"] = parser;
+	document["parseTree"] = parseTree;
+	document["symbolTableVisitor"] = symbolTableVisitor;
+	return {parser, parseTree , visitor: symbolTableVisitor};
+} */
+
+
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

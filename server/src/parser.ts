@@ -1,11 +1,7 @@
-import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult } from 'chevrotain'
+import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult} from 'chevrotain'
 import Tokens, { vocabulary, lexer } from './lexer'
-import { AbstractScope } from './scope'
 import { Node, Data, Position, Point, Parent, Literal } from 'unist'
 import * as node from 'unist-builder'
-import { InterfaceItem } from './interface'
-
-class Scope extends AbstractScope<InterfaceItem & Position> { }
 
 function getStartPoint (token: IToken): Point {
   return {
@@ -34,11 +30,11 @@ function getPosition (...args: IToken[]): Position {
 
 const debug = process.env.NODE_ENV === 'development'
 
-export class Parser extends CstParser {
+export class LamaParser extends CstParser {
 
   public lexingResult?: ILexingResult
 
-  public static reset (parser: Parser): void {
+  public static reset (parser: LamaParser): void {
     parser.reset()
   }
 
@@ -55,116 +51,89 @@ export class Parser extends CstParser {
   public parse (text: string): CstNode {
     this.lexingResult = lexer.tokenize(text)
     this.input = this.lexingResult.tokens
-    return this.compilationUnit(0, [new Scope()])
+    return this.compilationUnit()
   }
 
-  private readonly compilationUnit = this.RULE('compilationUnit', (scope: Scope) => {
+  private readonly compilationUnit = this.RULE('compilationUnit', () => {
     this.MANY(() => {
-      const importToken = this.CONSUME(Tokens.Import)
-      const identifierToken = this.CONSUME(Tokens.UIdentifier)
-      const semicolonToken = this.CONSUME(Tokens.Semicolon)
-      this.ACTION(() => {
-        const identifier = identifierToken.image
-        scope.add(identifier, {
-          type: 'I',
-          identifier,
-          start: getStartPoint(identifierToken),
-          end: getEndPoint(identifierToken)
-        })
-      })
+      this.CONSUME(Tokens.Import)
+      this.CONSUME(Tokens.UIdentifier)
+      this.CONSUME(Tokens.Semicolon)
     })
-    this.SUBRULE(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE(this.scopeExpression)
   }) 
 
-  private readonly scopeExpression = this.RULE('scopeExpression', (scope: Scope) => {
+  private readonly scopeExpression = this.RULE('scopeExpression', () => {
     this.MANY(() => {
-      this.SUBRULE(this.definition, { ARGS: [scope] })
+      this.SUBRULE(this.definition)
     })
     this.OPTION(() => {
-      this.SUBRULE(this.expression, { ARGS: [scope] })
+      this.SUBRULE(this.expression)
     })
   })
 
-  private readonly definition = this.RULE('definition', (scope: Scope) => {
+  private readonly definition = this.RULE('definition', () => {
     this.OR([
       {
         ALT: () => {
-          this.SUBRULE(this.functionDefinition, { ARGS: [scope] })
+          this.SUBRULE(this.functionDefinition)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.infixDefinition, { ARGS: [scope] })
+          this.SUBRULE(this.infixDefinition)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.variableDefinition, { ARGS: [scope] })
+          this.SUBRULE(this.variableDefinition)
         }
       }
     ])
   })
 
-  private readonly functionDefinition = this.RULE('functionDefinition', (scope: Scope) => {
+  private readonly functionDefinition = this.RULE('functionDefinition', () => {
     this.OPTION(() => {
       this.CONSUME(Tokens.Public)
     })
     this.CONSUME(Tokens.Fun)
-    const identifierToken = this.CONSUME(Tokens.LIdentifier)
+    this.CONSUME(Tokens.LIdentifier)
     this.CONSUME(Tokens.LRound)
-    this.SUBRULE(this.functionArguments, { ARGS: [scope] })
+    this.SUBRULE(this.functionArguments)
     this.CONSUME(Tokens.RRound)
-    this.ACTION(() => {
-      const identifier = identifierToken.image
-      scope.add(identifier, {
-        type: 'F',
-        identifier,
-        start: getStartPoint(identifierToken),
-        end: getEndPoint(identifierToken)
-      })
-    })
-    this.SUBRULE(this.functionBody, { ARGS: [scope] })
+    this.SUBRULE(this.functionBody)
   })
 
-  private readonly functionArguments = this.RULE('functionArguments', (scope: Scope) => {
+  private readonly functionArguments = this.RULE('functionArguments', () => {
     this.MANY_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE(this.pattern, { ARGS: [scope] })
+        this.SUBRULE(this.pattern)
       }
     })
   })
 
-  private readonly functionBody = this.RULE('functionBody', (scope: Scope) => {
+  private readonly functionBody = this.RULE('functionBody', () => {
     this.CONSUME(Tokens.LCurly)
-    this.SUBRULE(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE(this.scopeExpression)
     this.CONSUME(Tokens.RCurly)
   })
 
-  private readonly infixDefinition = this.RULE('infixDefinition', (scope: Scope) => {
+  private readonly infixDefinition = this.RULE('infixDefinition', () => {
     this.OPTION(() => {
       this.CONSUME(Tokens.Public)
     })
     this.CONSUME(Tokens.Infixity)
-    const operatorToken = this.CONSUME1(Tokens.Operator)
+    this.CONSUME1(Tokens.Operator)
     this.CONSUME(Tokens.InfixLevel)
     this.CONSUME2(Tokens.Operator)
     this.CONSUME(Tokens.LRound)
-    this.SUBRULE(this.functionArguments, { ARGS: [scope] })
+    this.SUBRULE(this.functionArguments)
     this.CONSUME(Tokens.RRound)
-    this.ACTION(() => {
-      const identifier = operatorToken.image
-      scope.add(identifier, {
-        type: 'F',
-        identifier,
-        start: getStartPoint(operatorToken),
-        end: getEndPoint(operatorToken)
-      })
-    })
-    this.SUBRULE(this.functionBody, { ARGS: [scope] })
+    this.SUBRULE(this.functionBody)
   })
 
-  private readonly variableDefinition = this.RULE('variableDefinition', (scope: Scope) => {
+  private readonly variableDefinition = this.RULE('variableDefinition', () => {
     this.OR([
       {
         ALT: () => {
@@ -180,59 +149,50 @@ export class Parser extends CstParser {
     this.AT_LEAST_ONE_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE(this.variableDefinitionItem, { ARGS: [scope] })
+        this.SUBRULE(this.variableDefinitionItem)
       }
     })
     this.CONSUME(Tokens.Semicolon)
   })
 
-  private readonly variableDefinitionItem = this.RULE('variableDefinitionItem', (scope: Scope) => {
-    const identifierToken = this.CONSUME(Tokens.LIdentifier)
-    this.ACTION(() => {
-      const identifier = identifierToken.image
-      scope.add(identifier, {
-        type: 'V',
-        identifier,
-        start: getStartPoint(identifierToken),
-        end: getEndPoint(identifierToken)
-      })
-    })
+  private readonly variableDefinitionItem = this.RULE('variableDefinitionItem', () => {
+    this.CONSUME(Tokens.LIdentifier)
     this.OPTION(() => {
       this.CONSUME(Tokens.Equal)
-      this.SUBRULE(this.basicExpression, { ARGS: [scope] })
+      this.SUBRULE(this.basicExpression)
     })
   })
 
-  private readonly expression = this.RULE('expression', (scope: Scope) => {
-    this.SUBRULE(this.basicExpression, { ARGS: [scope] })
+  private readonly expression = this.RULE('expression', () => {
+    this.SUBRULE(this.basicExpression)
     this.OPTION(() => {
       this.CONSUME(Tokens.Semicolon)
-      this.SUBRULE(this.expression, { ARGS: [scope] })
+      this.SUBRULE(this.expression)
     })
   })
 
-  private readonly basicExpression = this.RULE('basicExpression', (scope: Scope) => { // FIXME, all above is correct
-    this.SUBRULE1(this.postfixExpression, { ARGS: [scope] })
+  private readonly basicExpression = this.RULE('basicExpression', () => { // FIXME, all above is correct
+    this.SUBRULE1(this.postfixExpression)
     this.MANY({
       GATE: () => !this.BACKTRACK(this.caseBranchPrefix).apply(this),
       DEF: () => {
         this.CONSUME(Tokens.Operator)
-        this.SUBRULE2(this.postfixExpression, { ARGS: [scope] })
+        this.SUBRULE2(this.postfixExpression)
       }
     })
   })
 
-  private readonly postfixExpression = this.RULE('postfixExpression', (scope: Scope) => {
+  private readonly postfixExpression = this.RULE('postfixExpression', () => {
     this.OPTION(() => {
       this.CONSUME(Tokens.Minus)
     })
-    this.SUBRULE(this.primary, { ARGS: [scope] })
+    this.SUBRULE(this.primary)
     this.MANY(() => {
-      this.SUBRULE(this.postfix, { ARGS: [scope] })
+      this.SUBRULE(this.postfix)
     })
   })
 
-  private readonly primary = this.RULE('primary', (scope: Scope) => { // TODO: Apply
+  private readonly primary = this.RULE('primary', () => { // TODO: Apply
     this.OR([
       {
         ALT: () => {
@@ -264,9 +224,9 @@ export class Parser extends CstParser {
         ALT: () => {
           this.CONSUME(Tokens.Fun)
           this.CONSUME1(Tokens.LRound)
-          this.SUBRULE(this.functionArguments, { ARGS: [scope] })
+          this.SUBRULE(this.functionArguments)
           this.CONSUME1(Tokens.RRound)
-          this.SUBRULE(this.functionBody, { ARGS: [scope] })
+          this.SUBRULE(this.functionBody)
         }
       },
       {
@@ -278,7 +238,7 @@ export class Parser extends CstParser {
         ALT: () => {
           this.CONSUME(Tokens.Return)
           this.OPTION1(() => {
-            this.SUBRULE(this.basicExpression, { ARGS: [scope] })
+            this.SUBRULE(this.basicExpression)
           })
         }
       },
@@ -289,12 +249,12 @@ export class Parser extends CstParser {
             {
               GATE: () => this.BACKTRACK(this.listExpressionBody).apply(this),
               ALT: () => {
-                this.SUBRULE(this.listExpressionBody, { ARGS: [scope] })
+                this.SUBRULE(this.listExpressionBody)
               }
             },
             {
               ALT: () => {
-                this.SUBRULE(this.scopeExpression, { ARGS: [scope] })
+                this.SUBRULE(this.scopeExpression)
               }
             }
           ])
@@ -303,58 +263,58 @@ export class Parser extends CstParser {
       },
       {
         ALT: () => {
-          this.SUBRULE(this.arrayExpression, { ARGS: [scope] })
+          this.SUBRULE(this.arrayExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.symbolExpression, { ARGS: [scope] })
+          this.SUBRULE(this.symbolExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.ifExpression, { ARGS: [scope] })
+          this.SUBRULE(this.ifExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.whileExpression, { ARGS: [scope] })
+          this.SUBRULE(this.whileExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.repeatExpression, { ARGS: [scope] })
+          this.SUBRULE(this.repeatExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.forExpression, { ARGS: [scope] })
+          this.SUBRULE(this.forExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.caseExpression, { ARGS: [scope] })
+          this.SUBRULE(this.caseExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.lazyExpression, { ARGS: [scope] })
+          this.SUBRULE(this.lazyExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.etaExpression, { ARGS: [scope] })
+          this.SUBRULE(this.etaExpression)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.syntaxExpression, { ARGS: [scope] })
+          this.SUBRULE(this.syntaxExpression)
         }
       },
       {
         ALT: () => {
           this.CONSUME2(Tokens.LRound)
-          this.SUBRULE2(this.expression, { ARGS: [scope] })
+          this.SUBRULE2(this.expression)
           this.CONSUME2(Tokens.RRound)
         }
       },
@@ -366,170 +326,170 @@ export class Parser extends CstParser {
     ])
   })
 
-  private readonly arrayExpression = this.RULE('arrayExpression', (scope: Scope) => {
+  private readonly arrayExpression = this.RULE('arrayExpression', () => {
     this.CONSUME(Tokens.LSquare)
     this.MANY_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE(this.expression, { ARGS: [scope] })
+        this.SUBRULE(this.expression)
       }
     })
     this.CONSUME(Tokens.RSquare)
   })
 
-  private readonly listExpressionBody = this.RULE('listExpressionBody', (scope: Scope) => {
-    this.SUBRULE1(this.expression, { ARGS: [scope] })
+  private readonly listExpressionBody = this.RULE('listExpressionBody', () => {
+    this.SUBRULE1(this.expression)
     this.CONSUME(Tokens.Comma)
     this.AT_LEAST_ONE_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE2(this.expression, { ARGS: [scope] })
+        this.SUBRULE2(this.expression)
       }
     })
   })
 
-  private readonly symbolExpression = this.RULE('symbolExpression', (scope: Scope) => {
+  private readonly symbolExpression = this.RULE('symbolExpression', () => {
     this.CONSUME(Tokens.UIdentifier)
     this.OPTION(() => {
       this.CONSUME(Tokens.LRound)
       this.AT_LEAST_ONE_SEP({
         SEP: Tokens.Comma,
         DEF: () => {
-          this.SUBRULE(this.expression, { ARGS: [scope] })
+          this.SUBRULE(this.expression)
         }
       })
       this.CONSUME(Tokens.RRound)
     })
   })
 
-  private readonly ifExpression = this.RULE('ifExpression', (scope: Scope) => {
+  private readonly ifExpression = this.RULE('ifExpression', () => {
     this.CONSUME(Tokens.If)
-    this.SUBRULE(this.expression, { ARGS: [scope] })
+    this.SUBRULE(this.expression)
     this.CONSUME(Tokens.Then)
-    this.SUBRULE(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE(this.scopeExpression)
     this.OPTION(() => {
-      this.SUBRULE(this.elsePart, { ARGS: [scope] })
+      this.SUBRULE(this.elsePart)
     })
     this.CONSUME(Tokens.Fi)
   })
 
-  private readonly elsePart = this.RULE('elsePart', (scope: Scope) => {
+  private readonly elsePart = this.RULE('elsePart', () => {
     this.OR([
       {
         ALT: () => {
           this.CONSUME(Tokens.Elif)
-          this.SUBRULE(this.expression, { ARGS: [scope] })
+          this.SUBRULE(this.expression)
           this.CONSUME(Tokens.Then)
-          this.SUBRULE1(this.scopeExpression, { ARGS: [new Scope(scope)] })
+          this.SUBRULE1(this.scopeExpression)
           this.OPTION(() => {
-            this.SUBRULE(this.elsePart, { ARGS: [scope] })
+            this.SUBRULE(this.elsePart)
           })
         }
       },
       {
         ALT: () => {
           this.CONSUME(Tokens.Else)
-          this.SUBRULE2(this.scopeExpression, { ARGS: [new Scope(scope)] })
+          this.SUBRULE2(this.scopeExpression)
         }
       }
     ])
   })
 
-  private readonly whileExpression = this.RULE('whileExpression', (scope: Scope) => {
+  private readonly whileExpression = this.RULE('whileExpression', () => {
     this.CONSUME(Tokens.While)
-    this.SUBRULE(this.expression, { ARGS: [scope] })
+    this.SUBRULE(this.expression)
     this.CONSUME(Tokens.Do)
-    this.SUBRULE(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE(this.scopeExpression)
     this.CONSUME(Tokens.Od)
   })
 
-  private readonly repeatExpression = this.RULE('repeatExpression', (scope: Scope) => {
+  private readonly repeatExpression = this.RULE('repeatExpression', () => {
     this.CONSUME(Tokens.Repeat)
-    this.SUBRULE(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE(this.scopeExpression)
     this.CONSUME(Tokens.Until)
-    this.SUBRULE(this.basicExpression, { ARGS: [scope] })
+    this.SUBRULE(this.basicExpression)
   })
 
-  private readonly forExpression = this.RULE('forExpression', (scope: Scope) => {
+  private readonly forExpression = this.RULE('forExpression', () => {
     this.CONSUME(Tokens.For)
-    this.SUBRULE1(this.expression, { ARGS: [scope] })
+    this.SUBRULE1(this.expression)
     this.CONSUME1(Tokens.Comma)
-    this.SUBRULE2(this.expression, { ARGS: [scope] })
+    this.SUBRULE2(this.expression)
     this.CONSUME2(Tokens.Comma)
-    this.SUBRULE3(this.expression, { ARGS: [scope] })
+    this.SUBRULE3(this.expression)
     this.CONSUME(Tokens.Do)
-    this.SUBRULE(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE(this.scopeExpression)
     this.CONSUME(Tokens.Od)
   })
 
-  private readonly caseExpression = this.RULE('caseExpression', (scope: Scope) => {
+  private readonly caseExpression = this.RULE('caseExpression', () => {
     this.CONSUME(Tokens.Case)
-    this.SUBRULE(this.expression, { ARGS: [scope] })
+    this.SUBRULE(this.expression)
     this.CONSUME(Tokens.Of)
-    this.SUBRULE(this.pattern, { ARGS: [scope] })
+    this.SUBRULE(this.pattern)
     this.CONSUME(Tokens.Arrow)
-    this.SUBRULE1(this.scopeExpression, { ARGS: [new Scope(scope)] })
+    this.SUBRULE1(this.scopeExpression)
     this.MANY(() => {
-      this.SUBRULE(this.caseBranchPrefix, { ARGS: [scope] })
-      this.SUBRULE2(this.scopeExpression, { ARGS: [new Scope(scope)] })
+      this.SUBRULE(this.caseBranchPrefix)
+      this.SUBRULE2(this.scopeExpression)
     })
     this.CONSUME(Tokens.Esac)
   })
 
-  private readonly caseBranchPrefix = this.RULE('caseBranchPrefix', (scope: Scope) => {
+  private readonly caseBranchPrefix = this.RULE('caseBranchPrefix', () => {
     this.CONSUME(Tokens.Bar)
-    this.SUBRULE(this.pattern, { ARGS: [scope] })
+    this.SUBRULE(this.pattern)
     this.CONSUME(Tokens.Arrow)
   })
 
-  private readonly lazyExpression = this.RULE('lazyExpression', (scope: Scope) => {
+  private readonly lazyExpression = this.RULE('lazyExpression', () => {
     this.CONSUME(Tokens.Lazy)
-    this.SUBRULE(this.basicExpression, { ARGS: [scope] })
+    this.SUBRULE(this.basicExpression)
   })
 
-  private readonly etaExpression = this.RULE('etaExpression', (scope: Scope) => {
+  private readonly etaExpression = this.RULE('etaExpression', () => {
     this.CONSUME(Tokens.Eta)
-    this.SUBRULE(this.basicExpression, { ARGS: [scope] })
+    this.SUBRULE(this.basicExpression)
   })
 
-  private readonly syntaxExpression = this.RULE('syntaxExpression', (scope: Scope) => {
+  private readonly syntaxExpression = this.RULE('syntaxExpression', () => {
     this.CONSUME(Tokens.Syntax)
     this.CONSUME(Tokens.LRound)
     this.AT_LEAST_ONE_SEP({
       SEP: Tokens.Bar,
       DEF: () => {
-        this.SUBRULE(this.syntaxSeq, { ARGS: [scope] })
+        this.SUBRULE(this.syntaxSeq)
       }
     })
     this.CONSUME(Tokens.RRound)
   })
 
-  private readonly syntaxSeq = this.RULE('syntaxSeq', (scope: Scope) => {
+  private readonly syntaxSeq = this.RULE('syntaxSeq', () => {
     this.AT_LEAST_ONE({
       DEF: () => {
-        this.SUBRULE(this.syntaxBinding, { ARGS: [scope] })
+        this.SUBRULE(this.syntaxBinding)
       }
     })
     this.OPTION(() => {
       this.CONSUME(Tokens.LCurly)
-      this.SUBRULE(this.expression, { ARGS: [scope] })
+      this.SUBRULE(this.expression)
       this.CONSUME(Tokens.RCurly)
     })
   })
 
-  private readonly syntaxBinding = this.RULE('syntaxBinding', (scope: Scope) => {
+  private readonly syntaxBinding = this.RULE('syntaxBinding', () => {
     this.OPTION1(() => {
       this.CONSUME(Tokens.Minus)
     })
     this.OPTION2(() => {
-      this.SUBRULE(this.pattern, { ARGS: [scope] })
+      this.SUBRULE(this.pattern)
       this.CONSUME(Tokens.Equal)
     })
-    this.SUBRULE(this.syntaxPostfix, { ARGS: [scope] })
+    this.SUBRULE(this.syntaxPostfix)
   })
 
-  private readonly syntaxPostfix = this.RULE('syntaxPostfix', (scope: Scope) => {
-    this.SUBRULE(this.syntaxPrimary, { ARGS: [scope] })
+  private readonly syntaxPostfix = this.RULE('syntaxPostfix', () => {
+    this.SUBRULE(this.syntaxPrimary)
     this.OPTION(() => {
       this.OR([
         {
@@ -551,7 +511,7 @@ export class Parser extends CstParser {
     })
   })
 
-  private readonly syntaxPrimary = this.RULE('syntaxPrimary', (scope: Scope) => {
+  private readonly syntaxPrimary = this.RULE('syntaxPrimary', () => {
     this.OR([
       {
         ALT: () => {
@@ -561,7 +521,7 @@ export class Parser extends CstParser {
             this.AT_LEAST_ONE_SEP({
               SEP: Tokens.Comma,
               DEF: () => {
-                this.SUBRULE1(this.expression, { ARGS: [scope] })
+                this.SUBRULE1(this.expression)
               }
             })
             this.CONSUME(Tokens.RSquare)
@@ -571,7 +531,7 @@ export class Parser extends CstParser {
       {
         ALT: () => {
           this.CONSUME1(Tokens.LRound)
-          this.SUBRULE(this.syntaxExpression, { ARGS: [scope] })
+          this.SUBRULE(this.syntaxExpression)
           this.CONSUME1(Tokens.RRound)
         }
       },
@@ -579,14 +539,14 @@ export class Parser extends CstParser {
         ALT: () => {
           this.CONSUME(Tokens.Dollar)
           this.CONSUME2(Tokens.LRound)
-          this.SUBRULE2(this.expression, { ARGS: [scope] })
+          this.SUBRULE2(this.expression)
           this.CONSUME2(Tokens.RRound)
         }
       }
     ])
   })
 
-  private readonly postfix = this.RULE('postfix', (scope: Scope) => {
+  private readonly postfix = this.RULE('postfix', () => {
     this.OR([
       {
         ALT: () => {
@@ -602,12 +562,12 @@ export class Parser extends CstParser {
       },
       {
         ALT: () => {
-          this.SUBRULE1(this.postfixCall, { ARGS: [scope] })
+          this.SUBRULE1(this.postfixCall)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.postfixIndex, { ARGS: [scope] })
+          this.SUBRULE(this.postfixIndex)
         }
       },
       {
@@ -615,41 +575,41 @@ export class Parser extends CstParser {
           this.CONSUME3(Tokens.Dot)
           this.CONSUME(Tokens.LIdentifier)
           this.OPTION(() => {
-            this.SUBRULE2(this.postfixCall, { ARGS: [scope] })
+            this.SUBRULE2(this.postfixCall)
           })
         }
       }
     ])
   })
 
-  private readonly postfixCall = this.RULE('postfixCall', (scope: Scope) => {
+  private readonly postfixCall = this.RULE('postfixCall', () => {
     this.CONSUME(Tokens.LRound)
     this.MANY_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE(this.expression, { ARGS: [scope] })
+        this.SUBRULE(this.expression)
       }
     })
     this.CONSUME(Tokens.RRound)
   })
 
-  private readonly postfixIndex = this.RULE('postfixIndex', (scope: Scope) => {
+  private readonly postfixIndex = this.RULE('postfixIndex', () => {
     this.CONSUME(Tokens.LSquare)
-    this.SUBRULE(this.expression, { ARGS: [scope] })
+    this.SUBRULE(this.expression)
     this.CONSUME(Tokens.RSquare)
   })
 
   /// PATTERNS
 
-  private readonly pattern = this.RULE('pattern', (scope: Scope) => {
-    this.SUBRULE(this.simplePattern, { ARGS: [scope] })
+  private readonly pattern = this.RULE('pattern', () => {
+    this.SUBRULE(this.simplePattern)
     this.OPTION(() => {
       this.CONSUME(Tokens.Colon)
-      this.SUBRULE(this.pattern, { ARGS: [scope] })
+      this.SUBRULE(this.pattern)
     })
   })
 
-  private readonly simplePattern = this.RULE('simplePattern', (scope: Scope) => {
+  private readonly simplePattern = this.RULE('simplePattern', () => {
     this.OR([
       {
         ALT: () => {
@@ -658,17 +618,17 @@ export class Parser extends CstParser {
       },
       {
         ALT: () => {
-          this.SUBRULE(this.sExprPattern, { ARGS: [scope] })
+          this.SUBRULE(this.sExprPattern)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.arrayPattern, { ARGS: [scope] })
+          this.SUBRULE(this.arrayPattern)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.listPattern, { ARGS: [scope] })
+          this.SUBRULE(this.listPattern)
         }
       },
       {
@@ -700,59 +660,59 @@ export class Parser extends CstParser {
       {
         ALT: () => {
           this.CONSUME(Tokens.LRound)
-          this.SUBRULE(this.pattern, { ARGS: [scope] })
+          this.SUBRULE(this.pattern)
           this.CONSUME(Tokens.RRound)
         }
       },
       {
         ALT: () => {
-          this.SUBRULE(this.asPattern, { ARGS: [scope] })
+          this.SUBRULE(this.asPattern)
         }
       }
     ])
   })
 
-  private readonly sExprPattern = this.RULE('sExprPattern', (scope: Scope) => {
+  private readonly sExprPattern = this.RULE('sExprPattern', () => {
     this.CONSUME(Tokens.UIdentifier)
     this.OPTION(() => {
       this.CONSUME(Tokens.LRound)
       this.AT_LEAST_ONE_SEP({
         SEP: Tokens.Comma,
         DEF: () => {
-          this.SUBRULE(this.pattern, { ARGS: [scope] })
+          this.SUBRULE(this.pattern)
         }
       })
       this.CONSUME(Tokens.RRound)
     })
   })
 
-  private readonly arrayPattern = this.RULE('arrayPattern', (scope: Scope) => {
+  private readonly arrayPattern = this.RULE('arrayPattern', () => {
     this.CONSUME(Tokens.LSquare)
     this.MANY_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE(this.pattern, { ARGS: [scope] })
+        this.SUBRULE(this.pattern)
       }
     })
     this.CONSUME(Tokens.RSquare)
   })
 
-  private readonly listPattern = this.RULE('listPattern', (scope: Scope) => {
+  private readonly listPattern = this.RULE('listPattern', () => {
     this.CONSUME(Tokens.LCurly)
     this.MANY_SEP({
       SEP: Tokens.Comma,
       DEF: () => {
-        this.SUBRULE(this.pattern, { ARGS: [scope] })
+        this.SUBRULE(this.pattern)
       }
     })
     this.CONSUME(Tokens.RCurly)
   })
 
-  private readonly asPattern = this.RULE('asPattern', (scope: Scope) => {
+  private readonly asPattern = this.RULE('asPattern', () => {
     this.CONSUME(Tokens.LIdentifier)
     this.OPTION(() => {
       this.CONSUME(Tokens.AtSign)
-      this.SUBRULE(this.pattern, { ARGS: [scope] })
+      this.SUBRULE(this.pattern)
     })
   })
 }
