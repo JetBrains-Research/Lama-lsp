@@ -26,24 +26,24 @@
 	"contributes": {
 		"languages": [
 			{
-                "id": "lama",
-                "aliases": [
-                    "Lama",
-                    "lama"
-                ],
-                "extensions": [
-                    ".lama"
-                ],
-                "configuration": "./languages/lama.language-configuration.json"
-            }
+				"id": "lama",
+				"aliases": [
+					"Lama",
+					"lama"
+				],
+				"extensions": [
+					".lama"
+				],
+				"configuration": "./languages/lama.language-configuration.json"
+			}
 		],
 		"grammars": [
-            {
-                "language": "lama",
-                "scopeName": "source.lama",
-                "path": "./syntaxes/lama.tmLanguage.json"
-            }
-        ],
+			{
+				"language": "lama",
+				"scopeName": "source.lama",
+				"path": "./syntaxes/lama.tmLanguage.json"
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "Example configuration",
@@ -86,6 +86,7 @@
 		"typescript": "^4.9.5"
 	},
 	"dependencies": {
+		"chevrotain": "^10.5.0",
 		"vscode": "^1.1.37",
 		"vscode-languageserver": "^8.1.0",
 		"vscode-languageserver-textdocument": "^1.0.8"
