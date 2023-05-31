@@ -54,6 +54,10 @@ export class LamaParser extends CstParser {
     return this.compilationUnit()
   }
 
+  public lex (text: string): any{
+    console.log(lexer.tokenize(text).tokens)
+  }
+
   private readonly compilationUnit = this.RULE('compilationUnit', () => {
     this.MANY(() => {
       this.CONSUME(Tokens.Import)
@@ -137,7 +141,7 @@ export class LamaParser extends CstParser {
     this.OR([
       {
         ALT: () => {
-          this.CONSUME(Tokens.Local)
+          this.CONSUME(Tokens.Var)
         }
       },
       {
@@ -234,14 +238,14 @@ export class LamaParser extends CstParser {
           this.CONSUME(Tokens.Skip)
         }
       },
-      {
+/*       {
         ALT: () => {
           this.CONSUME(Tokens.Return)
           this.OPTION1(() => {
             this.SUBRULE(this.basicExpression)
           })
         }
-      },
+      }, */
       {
         ALT: () => {
           this.CONSUME(Tokens.LCurly)
@@ -281,11 +285,11 @@ export class LamaParser extends CstParser {
           this.SUBRULE(this.whileExpression)
         }
       },
-      {
+/*       {
         ALT: () => {
           this.SUBRULE(this.repeatExpression)
         }
-      },
+      }, */
       {
         ALT: () => {
           this.SUBRULE(this.forExpression)
@@ -403,12 +407,12 @@ export class LamaParser extends CstParser {
     this.CONSUME(Tokens.Od)
   })
 
-  private readonly repeatExpression = this.RULE('repeatExpression', () => {
+/*   private readonly repeatExpression = this.RULE('repeatExpression', () => {
     this.CONSUME(Tokens.Repeat)
     this.SUBRULE(this.scopeExpression)
     this.CONSUME(Tokens.Until)
     this.SUBRULE(this.basicExpression)
-  })
+  }) */
 
   private readonly forExpression = this.RULE('forExpression', () => {
     this.CONSUME(Tokens.For)

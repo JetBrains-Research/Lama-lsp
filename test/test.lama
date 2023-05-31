@@ -1,2 +1,6 @@
-public findme = 5;
-local notme = findme;
+var x, y, z;
+
+x := read (); 
+y := read (); 
+z := y*y; 
+write (x+z) 

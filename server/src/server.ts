@@ -247,19 +247,19 @@ connection.onDefinition((params) => {
 	const document = documents.get(uri);
 	if(document !== undefined) {
 		//const {parser, parseTree, visitor} = ensureParsed(document);    //4TODO - optimization with caching
-		const input = document.getText();       //not sure
+		const input = document.getText();      
 		const parser = new LamaParser();
-		const init_node = parser.parse(input);  //not sure
+		const init_node = parser.parse(input); 
+		/* parser.lex(input); */ 
 		const visitor = new LamaVisitor(uri);
 		const init_scope = new Scope();
 		visitor.visit(init_node, init_scope);
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
 		if(parser.lexingResult) {
-			//const node = getNode(init_node, pos);        // 1TODO - научиться вычислять токен на позиции курсора
-			const token = computeToken(init_node, offset);		 //1TODO - научиться получать scope токена
+			const token = computeToken(init_node, offset);		
 			if(token && token.scope) {					                    
-				const definition = token.scope.get(token.image);           //mb автоматически из токена?
+				const definition = token.scope.get(token.image);           
 				if(definition !== undefined) {
 					const targetSelectionRange = PositionToRange(definition);
 					const location = Location.create(uri, targetSelectionRange); //2TODO LocationLink[] - ??

@@ -1,4 +1,4 @@
-import { IToken } from 'chevrotain';
+import { IToken, CstNode } from 'chevrotain';
 import {Point} from 'unist'
 import { LamaParser } from './parser';
 import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileExpressionCstChildren, RepeatExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, CaseBranchPrefixCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, AsPatternCstChildren} from './lama_cts';
@@ -45,10 +45,12 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     else if(Array.isArray(node)) {
       node.forEach((element: any) => {
         super.visit(element, param);
+        /* console.log(element.name) */
       });
     }
     else {
       super.visit(node, param);
+      /* console.log(node.name) */
     }
   }
 

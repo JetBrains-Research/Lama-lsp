@@ -64,7 +64,7 @@ export function computeToken(node: any /* CstNode */, offset: number): any /* IT
 
 function inside(offset: number, range: any/* CstNodeLocation | IToken */): Boolean {
     if(range.endOffset) {
-        if(offset >= range.startOffset && offset <= range.endOffset) {
+        if(offset >= range.startOffset && offset <= range.endOffset + 1) {
             return true;
         }
     }

@@ -50,10 +50,10 @@
         },
         "variable-definition": {
             "name": "meta.variable.definition.lama",
-            "begin": "\\b(?:(local)|(public))\\b",
+            "begin": "\\b(?:(var)|(public))\\b",
             "beginCaptures": {
                 "1": {
-                    "name": "storage.modifier.local.lama"
+                    "name": "storage.modifier.var.lama"
                 },
                 "2": {
                     "name": "storage.modifier.public.lama"
@@ -106,7 +106,7 @@
         },
         "variable-name": {
             "name": "variable.other.lama",
-            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
+            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
         },
         "function-definition": {
             "name": "meta.function.definition.lama",
@@ -137,7 +137,7 @@
         },
         "function-name": {
             "name": "entity.name.function.lama",
-            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
+            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
         },
         "function-parameters-list": {
             "name": "meta.parens.lama",
@@ -298,7 +298,7 @@
         },
         "postfix-call-with-parameters": {
             "name": "meta.function-call.lama",
-            "begin": "(?:(\\.)|\\b)(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b(?=\\s*\\([^*])",
+            "begin": "(?:(\\.)|\\b)(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b(?=\\s*\\([^*])",
             "beginCaptures": {
                 "1": {
                     "name": "punctuation.separator.function-call.lama"
@@ -346,7 +346,7 @@
         },
         "postfix-call-without-parameters": {
             "name": "meta.function-call.lama",
-            "match": "(\\.)(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b",
+            "match": "(\\.)(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b",
             "captures": {
                 "1": {
                     "name": "punctuation.separator.function-call.lama"
@@ -1271,7 +1271,7 @@
             ]
         },
         "as-pattern": {
-            "begin": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\s*(@)",
+            "begin": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\s*(@)",
             "end": "(?=.|$)",
             "applyEndPatternLast": 1,
             "beginCaptures": {
@@ -1296,7 +1296,7 @@
         },
         "name-pattern": {
             "name": "variable.parameter.lama",
-            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
+            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
         },
 
 
@@ -1477,7 +1477,7 @@
             ]
         },
         "type-as-pattern": {
-            "begin": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\s*(@)",
+            "begin": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\s*(@)",
             "end": "(?=.|$)",
             "applyEndPatternLast": 1,
             "beginCaptures": {
@@ -1499,7 +1499,7 @@
         },
         "type-name-pattern": {
             "name": "variable.parameter.lama",
-            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|local|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
+            "match": "\\b(?!(?:after|array|at|before|boxed|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|repeat|return|sexp|skip|string|syntax|then|true|unboxed|until|when|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
         },
 
 
