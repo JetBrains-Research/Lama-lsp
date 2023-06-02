@@ -259,7 +259,7 @@ connection.onDefinition((params) => {
 		if(parser.lexingResult) {
 			const token = computeToken(init_node, offset);		
 			if(token && token.scope) {					                    
-				const definition = token.scope.get(token.image);           
+				const definition = findDefinition(token.image, token.scope)/* token.scope.get(token.image) */;           
 				if(definition !== undefined) {
 					const targetSelectionRange = PositionToRange(definition);
 					const location = Location.create(uri, targetSelectionRange); //2TODO LocationLink[] - ??

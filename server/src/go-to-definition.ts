@@ -4,13 +4,20 @@ import {Range as VsRange, Position as VsPosition} from 'vscode-languageserver'
 import { CstNode, CstNodeLocation, IToken } from 'chevrotain';
 import { InterfaceItem } from './interface';
 
-export function findDefinition(name: string, scope: Scope<UiPosition>) { 
-    if(scope === undefined) {
+export function findDefinition(name: string, scope: Scope<UiPosition> | undefined) { 
+    while (scope !== undefined) {
+        const value = scope.get(name);
+        if(value !== undefined) {
+            return value;
+        }
+        scope = scope.parent;
+    }
+    /*     if(scope === undefined) {
         return undefined;
     }
     else {
         return scope.get(name);  //not sure
-    }
+    } */
 }                                //COLLISIONS
 
 export function PositionToRange (position: UiPosition) : VsRange {

@@ -3,8 +3,11 @@ export class AbstractScope<T> { //compare with Lama scope
     [identifier: string]: T
   }
 
+  public parent: AbstractScope<T> | undefined
+
   constructor (parent?: AbstractScope<T>) {
     this.scope = parent === undefined ? {} : Object.create(parent)
+    this.parent = parent
   }
 
   public get (identifier: string): T | undefined {
