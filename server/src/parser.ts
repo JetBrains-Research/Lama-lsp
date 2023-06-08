@@ -282,7 +282,12 @@ export class LamaParser extends CstParser {
       },
       {
         ALT: () => {
-          this.SUBRULE(this.whileExpression)
+          this.SUBRULE(this.whileDoExpression)
+        }
+      },
+      {
+        ALT: () => {
+          this.SUBRULE(this.doWhileExpression)
         }
       },
 /*       {
@@ -399,11 +404,19 @@ export class LamaParser extends CstParser {
     ])
   })
 
-  private readonly whileExpression = this.RULE('whileExpression', () => {
+  private readonly whileDoExpression = this.RULE('whileDoExpression', () => {
     this.CONSUME(Tokens.While)
     this.SUBRULE(this.expression)
     this.CONSUME(Tokens.Do)
     this.SUBRULE(this.scopeExpression)
+    this.CONSUME(Tokens.Od)
+  })
+
+  private readonly doWhileExpression = this.RULE('doWhileExpression', () => {
+    this.CONSUME(Tokens.Do)
+    this.SUBRULE(this.scopeExpression)
+    this.CONSUME(Tokens.While)
+    this.SUBRULE(this.expression)
     this.CONSUME(Tokens.Od)
   })
 

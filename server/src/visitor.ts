@@ -1,7 +1,7 @@
 import { IToken, CstNode } from 'chevrotain';
 import {Point} from 'unist'
 import { LamaParser } from './parser';
-import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileExpressionCstChildren, RepeatExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, CaseBranchPrefixCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, AsPatternCstChildren} from './lama_cts';
+import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren, DoWhileExpressionCstChildren, RepeatExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, CaseBranchPrefixCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, AsPatternCstChildren} from './lama_cts';
 import { AbstractScope } from './scope'
 import { InterfaceItem } from './interface'
 import { Position } from 'unist'
@@ -153,7 +153,8 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     this.visit(ctx.arrayExpression, scope)
     this.visit(ctx.symbolExpression, scope)
     this.visit(ctx.ifExpression, scope)
-    this.visit(ctx.whileExpression, scope)
+    this.visit(ctx.whileDoExpression, scope)
+    this.visit(ctx.doWhileExpression, scope)
     this.visit(ctx.repeatExpression, scope)
     this.visit(ctx.forExpression, scope)
     this.visit(ctx.caseExpression, scope)
@@ -188,9 +189,14 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     this.visit(ctx.scopeExpression, new Scope(scope))
   }
 
-  whileExpression(ctx: WhileExpressionCstChildren, scope: Scope) {
+  whileDoExpression(ctx: WhileDoExpressionCstChildren, scope: Scope) {
     this.visit(ctx.expression, scope)
     this.visit(ctx.scopeExpression, new Scope(scope))
+  }
+
+  doWhileExpression(ctx: DoWhileExpressionCstChildren, scope: Scope) {
+    this.visit(ctx.scopeExpression, new Scope(scope))
+    this.visit(ctx.expression, scope)
   }
 
   repeatExpression(ctx: RepeatExpressionCstChildren, scope: Scope) {

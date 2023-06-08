@@ -168,7 +168,8 @@ export type PrimaryCstChildren = {
   arrayExpression?: ArrayExpressionCstNode[];
   symbolExpression?: SymbolExpressionCstNode[];
   ifExpression?: IfExpressionCstNode[];
-  whileExpression?: WhileExpressionCstNode[];
+  whileDoExpression?: WhileDoExpressionCstNode[];
+  doWhileExpression?: DoWhileExpressionCstNode[];
   repeatExpression?: RepeatExpressionCstNode[];
   forExpression?: ForExpressionCstNode[];
   caseExpression?: CaseExpressionCstNode[];
@@ -242,16 +243,29 @@ export type ElsePartCstChildren = {
   Else?: IToken[];
 };
 
-export interface WhileExpressionCstNode extends CstNode {
-  name: "whileExpression";
-  children: WhileExpressionCstChildren;
+export interface WhileDoExpressionCstNode extends CstNode {
+  name: "whileDoExpression";
+  children: WhileDoExpressionCstChildren;
 }
 
-export type WhileExpressionCstChildren = {
+export type WhileDoExpressionCstChildren = {
   While: IToken[];
   expression: ExpressionCstNode[];
   Do: IToken[];
   scopeExpression: ScopeExpressionCstNode[];
+  Od: IToken[];
+};
+
+export interface DoWhileExpressionCstNode extends CstNode {
+  name: "doWhileExpression";
+  children: DoWhileExpressionCstChildren;
+}
+
+export type DoWhileExpressionCstChildren = {
+  Do: IToken[];
+  scopeExpression: ScopeExpressionCstNode[];
+  While: IToken[];
+  expression: ExpressionCstNode[];
   Od: IToken[];
 };
 
@@ -531,7 +545,8 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   symbolExpression(children: SymbolExpressionCstChildren, param?: IN): OUT;
   ifExpression(children: IfExpressionCstChildren, param?: IN): OUT;
   elsePart(children: ElsePartCstChildren, param?: IN): OUT;
-  whileExpression(children: WhileExpressionCstChildren, param?: IN): OUT;
+  whileDoExpression(children: WhileDoExpressionCstChildren, param?: IN): OUT;
+  doWhileExpression(children: DoWhileExpressionCstChildren, param?: IN): OUT;
   repeatExpression(children: RepeatExpressionCstChildren, param?: IN): OUT;
   forExpression(children: ForExpressionCstChildren, param?: IN): OUT;
   caseExpression(children: CaseExpressionCstChildren, param?: IN): OUT;

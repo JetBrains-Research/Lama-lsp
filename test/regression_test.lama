@@ -1,16 +1,22 @@
-var n = read ();
+var s, n, p;
 
-do
-  
-  if n == 1 then write (0)
-elif n == 2 then write (1)
-elif n == 3 then write (2)
-elif n == 4 then write (3)
-            else write (10)
-  fi;
+s := 0;
+n := read ();
+p := 2;
 
-  if n >= 5 then write (11) fi;
+while n > 0 do (
+    var c = 2, f = 1;
 
-  n := n - 1
+    while c*c <= p && f do
+      f := (p % c) != 0;
+      c := c + 1
+    od;
 
-while n != 0 od
+    if f != 0 then
+      if n == 1 then write (p) else skip fi;
+      n := n - 1
+    else skip fi;
+
+    p := p + 1
+)
+od
