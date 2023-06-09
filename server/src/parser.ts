@@ -1,4 +1,4 @@
-import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult} from 'chevrotain'
+import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult, Rule} from 'chevrotain'
 import Tokens, { vocabulary, lexer } from './lexer'
 import { Node, Data, Position, Point, Parent, Literal } from 'unist'
 import * as node from 'unist-builder'
@@ -246,7 +246,7 @@ export class LamaParser extends CstParser {
           })
         }
       }, */
-      {
+      /* {
         ALT: () => {
           this.CONSUME(Tokens.LCurly)
           this.OR2([
@@ -262,6 +262,13 @@ export class LamaParser extends CstParser {
               }
             }
           ])
+          this.CONSUME(Tokens.RCurly)
+        }
+      }, */
+      {
+        ALT: () => {
+          this.CONSUME(Tokens.LCurly)
+          this.SUBRULE(this.listExpressionBody)
           this.CONSUME(Tokens.RCurly)
         }
       },
@@ -323,7 +330,7 @@ export class LamaParser extends CstParser {
       {
         ALT: () => {
           this.CONSUME2(Tokens.LRound)
-          this.SUBRULE2(this.expression)
+          this.SUBRULE(this.scopeExpression)
           this.CONSUME2(Tokens.RRound)
         }
       },
@@ -733,3 +740,7 @@ export class LamaParser extends CstParser {
     })
   })
 }
+
+const parser = new LamaParser()
+
+export const productions: Record<string, Rule> = parser.getGAstProductions()

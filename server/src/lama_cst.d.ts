@@ -91,7 +91,7 @@ export interface VariableDefinitionCstNode extends CstNode {
 }
 
 export type VariableDefinitionCstChildren = {
-  Local?: IToken[];
+  Var?: IToken[];
   Public?: IToken[];
   variableDefinitionItem: VariableDefinitionItemCstNode[];
   Comma?: IToken[];
@@ -159,24 +159,20 @@ export type PrimaryCstChildren = {
   RRound?: (IToken)[];
   functionBody?: FunctionBodyCstNode[];
   Skip?: IToken[];
-  Return?: IToken[];
-  basicExpression?: BasicExpressionCstNode[];
   LCurly?: IToken[];
   listExpressionBody?: ListExpressionBodyCstNode[];
-  scopeExpression?: ScopeExpressionCstNode[];
   RCurly?: IToken[];
   arrayExpression?: ArrayExpressionCstNode[];
   symbolExpression?: SymbolExpressionCstNode[];
   ifExpression?: IfExpressionCstNode[];
   whileDoExpression?: WhileDoExpressionCstNode[];
   doWhileExpression?: DoWhileExpressionCstNode[];
-  repeatExpression?: RepeatExpressionCstNode[];
   forExpression?: ForExpressionCstNode[];
   caseExpression?: CaseExpressionCstNode[];
   lazyExpression?: LazyExpressionCstNode[];
   etaExpression?: EtaExpressionCstNode[];
   syntaxExpression?: SyntaxExpressionCstNode[];
-  expression?: ExpressionCstNode[];
+  scopeExpression?: ScopeExpressionCstNode[];
   LIdentifier?: IToken[];
 };
 
@@ -267,18 +263,6 @@ export type DoWhileExpressionCstChildren = {
   While: IToken[];
   expression: ExpressionCstNode[];
   Od: IToken[];
-};
-
-export interface RepeatExpressionCstNode extends CstNode {
-  name: "repeatExpression";
-  children: RepeatExpressionCstChildren;
-}
-
-export type RepeatExpressionCstChildren = {
-  Repeat: IToken[];
-  scopeExpression: ScopeExpressionCstNode[];
-  Until: IToken[];
-  basicExpression: BasicExpressionCstNode[];
 };
 
 export interface ForExpressionCstNode extends CstNode {
@@ -547,7 +531,6 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   elsePart(children: ElsePartCstChildren, param?: IN): OUT;
   whileDoExpression(children: WhileDoExpressionCstChildren, param?: IN): OUT;
   doWhileExpression(children: DoWhileExpressionCstChildren, param?: IN): OUT;
-  repeatExpression(children: RepeatExpressionCstChildren, param?: IN): OUT;
   forExpression(children: ForExpressionCstChildren, param?: IN): OUT;
   caseExpression(children: CaseExpressionCstChildren, param?: IN): OUT;
   caseBranchPrefix(children: CaseBranchPrefixCstChildren, param?: IN): OUT;
