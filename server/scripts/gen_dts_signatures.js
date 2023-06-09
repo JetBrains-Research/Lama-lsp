@@ -8,5 +8,5 @@ const { generateCstDts } = require("chevrotain")
 const { productions } = require("../out/parser.js")
 
 const dtsString = generateCstDts(productions)
-const dtsPath = resolve(__dirname, "..", "src", "new_cst.d.ts")
+const dtsPath = resolve(__dirname, "..", "src", "lama_cst.d.ts")
 writeFileSync(dtsPath, dtsString)

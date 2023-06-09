@@ -1,22 +1,17 @@
-var s, n, p;
+fun test1 () {
+  a := 3
+}
 
-s := 0;
-n := read ();
-p := 2;
+fun test2 (b) {
+  a := b
+}
 
-while n > 0 do (
-    var c = 2, f = 1;
+var x, a, b;
 
-    while c*c <= p && f do
-      f := (p % c) != 0;
-      c := c + 1
-    od;
+x := read ();
 
-    if f != 0 then
-      if n == 1 then write (p) else skip fi;
-      n := n - 1
-    else skip fi;
+test1 ();
+write (a);
 
-    p := p + 1
-)
-od
+test2 (8);
+write (a)
