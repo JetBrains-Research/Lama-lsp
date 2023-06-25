@@ -1,20 +1,14 @@
-var i, s;
+var x;
 
-i := 0;
-s := 0; 
+fun sum (x) {
+  case x of
+    Nil          ->  0
+  | Cons (x, tl) ->  (x + sum (tl))
+  esac
+}
 
-while i < 100
-do
-    var j = 0;
+x := read ();
 
-    while j < 100
-    do   
-      s := s + j;
-      j := j + 1
-    od;
-
-    s := s + i;
-    i := i + 1
-od;
-
-write (s)
+write (sum (Nil));
+write (sum (Cons (100, Nil)));
+write (sum (Cons (100, Cons (200, Nil))))

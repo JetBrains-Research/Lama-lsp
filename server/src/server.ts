@@ -250,7 +250,8 @@ connection.onDefinition((params) => {
 		const input = document.getText();      
 		const parser = new LamaParser();
 		const init_node = parser.parse(input); 
-		/* parser.lex(input); */ 
+		/* console.log(init_node); */
+		/* parser.lex(input);  */
 		const visitor = new LamaVisitor(uri);
 		const init_scope = new Scope();
 		visitor.visit(init_node, init_scope);

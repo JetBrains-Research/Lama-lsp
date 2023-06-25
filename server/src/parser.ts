@@ -186,6 +186,20 @@ export class LamaParser extends CstParser {
     })
   })
 
+/*   private readonly basicExpression = this.RULE('basicExpression', () => { // FIXME, all above is correct
+    this.SUBRULE1(this.postfixExpression)
+    this.MANY({
+      GATE: () => !(
+        this.LA(1).tokenType === Tokens.Bar &&
+        this.caseBranch()
+      ),
+      DEF: () => {
+        this.CONSUME(Tokens.Operator)
+        this.SUBRULE2(this.postfixExpression)
+      }
+    })
+  }) */
+
   private readonly postfixExpression = this.RULE('postfixExpression', () => {
     this.OPTION(() => {
       this.CONSUME(Tokens.Minus)
@@ -436,13 +450,13 @@ export class LamaParser extends CstParser {
 
   private readonly forExpression = this.RULE('forExpression', () => {
     this.CONSUME(Tokens.For)
-    this.SUBRULE1(this.expression)
+    this.SUBRULE1(this.scopeExpression)
     this.CONSUME1(Tokens.Comma)
-    this.SUBRULE2(this.expression)
+    this.SUBRULE1(this.expression)
     this.CONSUME2(Tokens.Comma)
-    this.SUBRULE3(this.expression)
+    this.SUBRULE2(this.expression)
     this.CONSUME(Tokens.Do)
-    this.SUBRULE(this.scopeExpression)
+    this.SUBRULE2(this.scopeExpression)
     this.CONSUME(Tokens.Od)
   })
 
@@ -465,6 +479,26 @@ export class LamaParser extends CstParser {
     this.SUBRULE(this.pattern)
     this.CONSUME(Tokens.Arrow)
   })
+
+/*   private readonly caseExpression = this.RULE('caseExpression', () => {
+    this.CONSUME(Tokens.Case)
+    this.SUBRULE(this.expression)
+    this.CONSUME(Tokens.Of)
+    this.AT_LEAST_ONE_SEP({
+      SEP: Tokens.Bar,
+      DEF: () => {
+        this.SUBRULE(this.caseBranch)
+      }
+    })
+    this.CONSUME(Tokens.Esac)
+  })
+
+  private readonly caseBranch = this.RULE('caseBranch', () => {
+    this.SUBRULE(this.pattern)
+    this.CONSUME(Tokens.Arrow)
+    this.SUBRULE(this.scopeExpression)
+  }) */
+
 
   private readonly lazyExpression = this.RULE('lazyExpression', () => {
     this.CONSUME(Tokens.Lazy)
@@ -657,6 +691,11 @@ export class LamaParser extends CstParser {
       },
       {
         ALT: () => {
+          this.SUBRULE(this.asPattern)
+        }
+      },
+      {
+        ALT: () => {
           this.CONSUME(Tokens.DecimalLiteral)
         }
       },
@@ -678,7 +717,7 @@ export class LamaParser extends CstParser {
       {
         ALT: () => {
           this.CONSUME(Tokens.Hash)
-          this.CONSUME(Tokens.Shape)
+          this.CONSUME(Tokens.Shape) //not sure
         }
       },
       {
@@ -686,11 +725,6 @@ export class LamaParser extends CstParser {
           this.CONSUME(Tokens.LRound)
           this.SUBRULE(this.pattern)
           this.CONSUME(Tokens.RRound)
-        }
-      },
-      {
-        ALT: () => {
-          this.SUBRULE(this.asPattern)
         }
       }
     ])

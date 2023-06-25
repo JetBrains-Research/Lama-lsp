@@ -1,17 +1,7 @@
-fun test1 () {
-  a := 3
+infixr ** before * (f, g) {
+   fun (x) { f (g (x))}
 }
 
-fun test2 (b) {
-  a := b
-}
+var x = read ();
 
-var x, a, b;
-
-x := read ();
-
-test1 ();
-write (a);
-
-test2 (8);
-write (a)
+write ((fun (x) { x+2} ** fun (x) { x+3})(7))
