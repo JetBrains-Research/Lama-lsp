@@ -1,0 +1,10 @@
+import Sample_import_2;
+
+(* public x = 5; *)
+(* var x = 5; *)
+
+public infixr ** before * (f, g) {
+   fun (x) { f (g (x))}
+}
+
+public y = x + 5;

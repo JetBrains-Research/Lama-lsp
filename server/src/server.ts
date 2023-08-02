@@ -26,11 +26,13 @@ import {
 } from './parser';
 
 import { findDefinition, PositionToRange, fictiveRange, computeToken} from './go-to-definition';
-import { LocationLink, Location } from 'vscode-languageserver';
-
+import { LocationLink, Location, DocumentUri } from 'vscode-languageserver';
+import * as pathFunctions from "path";
+import * as fs from "fs";
+import fileUriToPath = require("file-uri-to-path");
 import {
 	LamaVisitor, Scope
-} from './visitor'
+} from './visitor';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -241,7 +243,85 @@ connection.onCompletionResolve(
 	}
 );
 
-//WIP                                                                      //3TODO - handling imports
+function computeBaseUri(uri: string) {
+	const lastSep = uri.lastIndexOf("/");
+	if (lastSep > 0) {
+		/* uri = uri.substring(0, lastSep + 1); */
+		uri = uri.substring(0, lastSep);
+	} else {
+		uri = "";
+	}
+	return uri;
+}
+
+function findStdlib(): string {
+	let lamacPath = process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "";
+	if (lamacPath){
+		const lamaPath = computeBaseUri(computeBaseUri(lamacPath));
+		const path = lamaPath + "/share/Lama";
+		return path;
+	}
+	return "";
+}
+
+function processImports(imports: any[], uri: DocumentUri):Scope {
+
+	let stdlibPath = findStdlib();
+
+	const baseUri = computeBaseUri(uri);
+	const basePath = ensurePath(baseUri);
+	let init_scope = new Scope();
+	for(const i in imports) {
+		const filename = "/" + imports[i].image + ".lama";
+		const std_filepath = stdlibPath + filename;
+		const filepath = basePath + filename;
+		if (fs.existsSync(std_filepath)) {
+			const documentUri = "file://" + stdlibPath + filename;
+			init_scope = new Scope(processImport(std_filepath, init_scope, documentUri));
+		} else if (fs.existsSync(filepath)) {
+			const documentUri = baseUri + filename;
+			init_scope = new Scope(processImport(filepath, init_scope, documentUri));
+		} else {
+			connection.window.showErrorMessage("Imported file not found: " + std_filepath);
+		}
+	}
+	return init_scope;
+}
+
+function processImport(path: string, init_scope: Scope, documentUri: DocumentUri): Scope {
+	try {
+		const data = fs.readFileSync(path);
+		const input = data.toString();
+		const parser = new LamaParser();
+		const init_node = parser.parse(input);
+
+		const visitor = new LamaVisitor(documentUri, true);
+		visitor.visit(init_node, init_scope);
+		return init_scope;
+	} catch (e) {
+		connection.window.showErrorMessage("Cannot read from imported file " + path + ": " + e);
+		console.error(e);
+		return init_scope;
+	}
+}
+
+function ensurePath(path: string) {
+	if (path.startsWith("file:")) {
+		//Decode for Windows paths like /C%3A/...
+		let decoded = decodeURIComponent(fileUriToPath(path));
+		if(!decoded.startsWith("\\\\") && decoded.startsWith("\\")) {
+			//Windows doesn't seem to like paths like \C:\...
+			decoded = decoded.substring(1);
+		}
+		return decoded;
+	} else if(!pathFunctions.isAbsolute(path)) {
+		return pathFunctions.resolve(path);
+	} else {
+		return path;
+	}
+}
+
+//WIP                                                                      
 connection.onDefinition((params) => {
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
@@ -250,33 +330,34 @@ connection.onDefinition((params) => {
 		const input = document.getText();      
 		const parser = new LamaParser();
 		const init_node = parser.parse(input); 
+
+		let init_scope = new Scope();
+		const imports = init_node.children.UIdentifier;
+		if(imports) {
+			init_scope = processImports(imports, uri);
+		}
 		/* console.log(init_node); */
 		/* parser.lex(input);  */
-		const visitor = new LamaVisitor(uri);
-		const init_scope = new Scope();
+		const visitor = new LamaVisitor(uri, false);
 		visitor.visit(init_node, init_scope);
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
 		if(parser.lexingResult) {
 			const token = computeToken(init_node, offset);		
 			if(token && token.scope) {					                    
-				const definition = findDefinition(token.image, token.scope)/* token.scope.get(token.image) */;           
+				const definition = findDefinition(token.image, token.scope);           
 				if(definition !== undefined) {
 					const targetSelectionRange = PositionToRange(definition);
-					const location = Location.create(uri, targetSelectionRange); //2TODO LocationLink[] - ??
+					const location = Location.create(definition.uri, targetSelectionRange); //2TODO LocationLink[] - ??
 					return location;
 				}
 			}
 		}
+		/* const smth_for_test = connection.sendRequest('c/textDocument/definition', params);
+		console.log(smth_for_test); */
 	}  
 	return undefined;
 });
-
-/* connection.onDefinition((params)=> {
-	const uri = params.textDocument.uri;
-	//const location = Location.create(uri, fictiveRange); --- crashed??
-	return undefined;
-}); */
 
 /* function markForReparsing(document: TextDocument) {
 	document["parser"] = undefined;

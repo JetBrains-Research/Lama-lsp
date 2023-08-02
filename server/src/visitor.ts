@@ -6,9 +6,10 @@ import { AbstractScope } from './scope'
 import { InterfaceItem } from './interface'
 import { Position } from 'unist'
 import { DocumentUri } from 'vscode-languageserver-textdocument';
+import { TextDocumentIdentifier } from 'vscode-languageserver';
 //const debug = process.env.NODE_ENV === 'development'
 
-export class Scope extends AbstractScope<InterfaceItem & Position> { }
+export class Scope extends AbstractScope<InterfaceItem & Position & TextDocumentIdentifier> { }
 
 function getStartPoint (token: IToken): Point {
   return {
@@ -32,7 +33,8 @@ const BaseLamaVisitor = parser.getBaseCstVisitorConstructor()
 export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scope, void> {
 
   constructor(
-    public documentUri: DocumentUri
+    public documentUri: DocumentUri,
+    public only_public: Boolean
   ) {
     super()
     this.validateVisitor()
@@ -64,7 +66,7 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
   }
 
   compilationUnit(ctx: CompilationUnitCstChildren, scope: Scope) {
-    this.visit(ctx.scopeExpression, new Scope(scope))
+    this.visit(ctx.scopeExpression, scope/* new Scope(scope) */)
   } 
 
   scopeExpression(ctx: ScopeExpressionCstChildren, scope: Scope) {
@@ -80,12 +82,15 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
 
   functionDefinition(ctx: FunctionDefinitionCstChildren, scope: Scope) { 
     const identifierToken = ctx.LIdentifier[0]
-    scope.add(identifierToken.image, {
-      type: 'F',
-      identifier: identifierToken.image,
-      start: getStartPoint(identifierToken),
-      end: getEndPoint(identifierToken)
-    })
+    if (ctx.Public || !this.only_public) {
+      scope.add(identifierToken.image, {
+        type: 'F',
+        identifier: identifierToken.image,
+        start: getStartPoint(identifierToken),
+        end: getEndPoint(identifierToken),
+        uri: this.documentUri
+      })
+    }
     this.registerScope(ctx.LIdentifier, scope)
     const fScope = new Scope(scope)
     this.visit(ctx.functionArguments, fScope)
@@ -113,12 +118,15 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
   infixDefinition(ctx: InfixDefinitionCstChildren, scope: Scope) {    
     const operatorToken = ctx.Operator[0]
     const identifier = operatorToken.image
-    scope.add(identifier, {
-      type: 'F',
-      identifier,
-      start: getStartPoint(operatorToken),
-      end: getEndPoint(operatorToken)
-    })
+    if (ctx.Public || !this.only_public) {
+      scope.add(identifier, {
+        type: 'F',
+        identifier,
+        start: getStartPoint(operatorToken),
+        end: getEndPoint(operatorToken),
+        uri: this.documentUri
+      })
+    }
     this.registerScope(ctx.Operator, scope)
     const iScope = new Scope(scope)
     this.visit(ctx.functionArguments, iScope)
@@ -126,7 +134,9 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
   }
 
   variableDefinition(ctx: VariableDefinitionCstChildren, scope: Scope) {
-    this.visit(ctx.variableDefinitionItem, scope)
+    if (ctx.Public || !this.only_public) {
+      this.visit(ctx.variableDefinitionItem, scope)
+    }
   }
 
   variableDefinitionItem(ctx: VariableDefinitionItemCstChildren, scope: Scope) {
@@ -136,8 +146,9 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
       type: 'V',
       identifier,
       start: getStartPoint(identifierToken),
-      end: getEndPoint(identifierToken)
-    })
+      end: getEndPoint(identifierToken),
+      uri: this.documentUri
+    }) 
     this.registerScope(ctx.LIdentifier, scope)
     this.visit(ctx.basicExpression, scope)
   }
@@ -340,12 +351,13 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
   asPattern(ctx: AsPatternCstChildren, scope: Scope) {
     const identifierToken = ctx.LIdentifier[0]
     const identifier = identifierToken.image
-      scope.add(identifier, {
-        type: 'V',
-        identifier,
-        start: getStartPoint(identifierToken),
-        end: getEndPoint(identifierToken)
-      })
+    scope.add(identifier, {
+      type: 'V',
+      identifier,
+      start: getStartPoint(identifierToken),
+      end: getEndPoint(identifierToken),
+      uri: this.documentUri
+    })
     this.registerScope(ctx.LIdentifier, scope)
     this.visit(ctx.pattern, scope)
   }

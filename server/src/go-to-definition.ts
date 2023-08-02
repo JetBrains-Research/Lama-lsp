@@ -1,10 +1,10 @@
 import {AbstractScope as Scope} from './scope'
 import {Position as UiPosition, Point as UiPoint} from 'unist'
-import {Range as VsRange, Position as VsPosition} from 'vscode-languageserver'
+import {Range as VsRange, Position as VsPosition, TextDocumentIdentifier} from 'vscode-languageserver'
 import { CstNode, CstNodeLocation, IToken } from 'chevrotain';
 import { InterfaceItem } from './interface';
 
-export function findDefinition(name: string, scope: Scope<UiPosition> | undefined) { 
+export function findDefinition(name: string, scope: Scope<UiPosition & TextDocumentIdentifier> | undefined) { 
     while (scope !== undefined) {
         const value = scope.get(name);
         if(value !== undefined) {

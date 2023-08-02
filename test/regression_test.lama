@@ -1,7 +1,11 @@
-infixr ** before * (f, g) {
-   fun (x) { f (g (x))}
-}
+import Sample_import;
 
-var x = read ();
+var a = y + 4;
+
+(* infixr ** before * (f, g) {
+   fun (x) { f (g (x))}
+} *)
+
+(* var x = read (); *)
 
 write ((fun (x) { x+2} ** fun (x) { x+3})(7))

@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, ExtensionContext, commands } from 'vscode';
 
 import {
 	LanguageClient,
@@ -13,7 +13,10 @@ import {
 	TransportKind
 } from 'vscode-languageclient/node';
 
+import {exec} from 'child_process';
+
 let client: LanguageClient;
+
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -50,7 +53,24 @@ export function activate(context: ExtensionContext) {
 	);
 
 	// Start the client. This will also launch the server
-	client.start();
+
+	exec('eval $(opam env); which lamac', (error, stdout, stderr) => {
+		if (error) {
+			console.error('Error while running "which lamac":', error.message);
+			return;
+		}
+	
+		const lamacPath = stdout.trim();
+		if (lamacPath) {
+			/* console.log('Lamac executable found:', lamacPath); */
+			process.env.LAMAC_PATH = lamacPath;
+		} else {
+			console.log('Lamac executable not found.');
+			// Handle the case when 'lamac' is not found
+		}
+		client.start();
+		});
+
 }
 
 export function deactivate(): Thenable<void> | undefined {

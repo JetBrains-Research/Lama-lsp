@@ -1,14 +1,19 @@
-var x;
+import Ostap;
+import Fun;
 
-fun sum (x) {
-  case x of
-    Nil          ->  0
-  | Cons (x, tl) ->  (x + sum (tl))
-  esac
+fun gen (depth) {
+  if depth == 0
+  then "a"
+  else gen (depth-1) ++ "*" ++ gen (depth-1)
+  fi    
 }
 
-x := read ();
+var a   = token ("a"),
+      add = [token ("+"), fun (l, _, r) {Add (l, r)}],
+      sub = [token ("-"), fun (l, _, r) {Sub (l, r)}],
+      mul = [token ("*"), fun (l, _, r) {Mul (l, r)}],
+      div = [token ("/"), fun (l, _, r) {Div (l, r)}],      
+      exp = expr ({[Left, {add, sub}], [Left, {mul, div}]}, a),
+      i;
 
-write (sum (Nil));
-write (sum (Cons (100, Nil)));
-write (sum (Cons (100, Cons (200, Nil))))
+printf ("%s\n", parseString (exp |> bypass (eof), gen (5)).string)
