@@ -66,9 +66,9 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			// Tell the client that this server supports code completion.
-			completionProvider: {
+			/* completionProvider: {
 				resolveProvider: true
-			},
+			}, */
 			// Tell the client that this server supports go to definition.
 			definitionProvider: true
 		}
@@ -157,7 +157,7 @@ documents.onDidChangeContent(change => {
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
-	const settings = await getDocumentSettings(textDocument.uri);
+	/* const settings = await getDocumentSettings(textDocument.uri);
 
 	// The validator creates diagnostics for all uppercase words length 2 and more
 	const text = textDocument.getText();
@@ -199,7 +199,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	}
 
 	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics }); */
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -208,7 +208,7 @@ connection.onDidChangeWatchedFiles(_change => {
 });
 
 // This handler provides the initial list of the completion items.
-connection.onCompletion(
+/* connection.onCompletion(
 	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
 		// The pass parameter contains the position of the text document in
 		// which code complete got requested. For the example we ignore this
@@ -226,11 +226,11 @@ connection.onCompletion(
 			}
 		];
 	}
-);
+); */
 
 // This handler resolves additional information for the item selected in
 // the completion list.
-connection.onCompletionResolve(
+/* connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
 		if (item.data === 1) {
 			item.detail = 'TypeScript details';
@@ -241,7 +241,7 @@ connection.onCompletionResolve(
 		}
 		return item;
 	}
-);
+); */
 
 function computeBaseUri(uri: string) {
 	const lastSep = uri.lastIndexOf("/");
