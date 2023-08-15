@@ -8,6 +8,15 @@ fun gen (depth) {
   fi    
 }
 
+fun sum (x) {
+  parseString (
+    syntax (l=DECIMAL token[”+”] r=DECIMAL eof {
+          stringInt (l) + stringInt (r)
+          }) ,
+    x
+  )
+}
+
 var a   = token ("a"),
       add = [token ("+"), fun (l, _, r) {Add (l, r)}],
       sub = [token ("-"), fun (l, _, r) {Sub (l, r)}],
