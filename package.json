@@ -1,14 +1,10 @@
 {
-	"name": "lsp-sample",
-	"description": "A language server example",
-	"author": "Microsoft Corporation",
+	"name": "lsp-lama",
+	"description": "Lama language server",
+	"author": "Artem Savelev",
 	"license": "MIT",
 	"version": "1.0.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
-	},
-	"publisher": "vscode-samples",
+	"publisher": "arsavelev",
 	"categories": [
 		"Programming Languages"
 	],
@@ -16,7 +12,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.75.0"
+		"vscode": "^1.80.0"
 	},
 	"activationEvents": [
 		"onCommand:lama.run",
@@ -69,12 +65,16 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
+		"vscode:prepublish": "npm run compile; npm run esbuild-base -- --minify",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-		"test": "powershell.exe -ExecutionPolicy Bypass -File ./scripts/e2e.ps1"
+		"test": "powershell.exe -ExecutionPolicy Bypass -File ./scripts/e2e.ps1",
+		"esbuild-base": "esbuild ./client/src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+		"esbuild": "npm run esbuild-base -- --sourcemap",
+		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+		"test-compile": "tsc -p ./"
 	},
 	"devDependencies": {
 		"@types/mocha": "^9.1.0",
@@ -82,14 +82,15 @@
 		"@types/vscode": "^1.80.0",
 		"@typescript-eslint/eslint-plugin": "^5.54.0",
 		"@typescript-eslint/parser": "^5.54.0",
+		"esbuild": "^0.19.2",
 		"eslint": "^8.35.0",
 		"mocha": "^9.2.1",
-		"typescript": "^4.9.5"
+		"typescript": "^4.9.5",
+		"vscode": "^1.1.37"
 	},
 	"dependencies": {
 		"chevrotain": "^10.5.0",
 		"file-uri-to-path": "^2.0.0",
-		"vscode": "^1.1.37",
 		"vscode-languageserver": "^8.1.0",
 		"vscode-languageserver-textdocument": "^1.0.8"
 	}

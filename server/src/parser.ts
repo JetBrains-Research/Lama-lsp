@@ -1,32 +1,5 @@
 import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult, Rule} from 'chevrotain'
 import Tokens, { vocabulary, lexer } from './lexer'
-import { Node, Data, Position, Point, Parent, Literal } from 'unist'
-import * as node from 'unist-builder'
-
-function getStartPoint (token: IToken): Point {
-  return {
-    offset: token.startOffset,
-    line: token.startLine ?? 0,
-    column: token.startColumn ?? 0
-  }
-}
-
-function getEndPoint (token: IToken): Point {
-  return {
-    offset: token.endOffset,
-    line: token.endLine ?? 0,
-    column: token.endColumn ?? 0
-  }
-}
-
-function getPosition (...args: IToken[]): Position {
-  const first = args[0]
-  const last = args[args.length - 1]
-  return {
-    start: getStartPoint(first),
-    end: getEndPoint(last)
-  }
-}
 
 const debug = process.env.NODE_ENV === 'development'
 
@@ -55,7 +28,7 @@ export class LamaParser extends CstParser {
   }
 
   public lex (text: string): any{
-    console.log(lexer.tokenize(text).tokens)
+    return lexer.tokenize(text).tokens
   }
 
   private readonly compilationUnit = this.RULE('compilationUnit', () => {
@@ -187,17 +160,24 @@ export class LamaParser extends CstParser {
   })
 
 /*   private readonly basicExpression = this.RULE('basicExpression', () => { // FIXME, all above is correct
-    this.SUBRULE1(this.postfixExpression)
-    this.MANY({
-      GATE: () => !(
-        this.LA(1).tokenType === Tokens.Bar &&
-        this.caseBranch()
-      ),
-      DEF: () => {
-        this.CONSUME(Tokens.Operator)
-        this.SUBRULE2(this.postfixExpression)
+    this.OR([
+      {
+        GATE: this.BACKTRACK(this.syntaxExpression),
+        ALT: () => this.SUBRULE(this.syntaxExpression)
+      },
+      {
+        ALT: () => {
+        this.SUBRULE1(this.postfixExpression)
+        this.MANY({
+          GATE: () => !this.BACKTRACK(this.caseBranchPrefix).apply(this),
+          DEF: () => {
+            this.CONSUME(Tokens.Operator)
+            this.SUBRULE2(this.postfixExpression)
+          }
+        })
+        }
       }
-    })
+    ])
   }) */
 
   private readonly postfixExpression = this.RULE('postfixExpression', () => {
@@ -367,7 +347,7 @@ export class LamaParser extends CstParser {
     this.CONSUME(Tokens.RSquare)
   })
 
-  private readonly listExpressionBody = this.RULE('listExpressionBody', () => {
+  /* private readonly listExpressionBody = this.RULE('listExpressionBody', () => {
     this.SUBRULE1(this.expression)
     this.CONSUME(Tokens.Comma)
     this.AT_LEAST_ONE_SEP({
@@ -375,6 +355,17 @@ export class LamaParser extends CstParser {
       DEF: () => {
         this.SUBRULE2(this.expression)
       }
+    })
+  }) */
+
+  private readonly listExpressionBody = this.RULE('listExpressionBody', () => {
+    this.OPTION(() => {
+      this.MANY_SEP({
+        SEP: Tokens.Comma,
+        DEF: () => {
+          this.SUBRULE(this.expression);
+        }
+      })
     })
   })
 
@@ -524,15 +515,22 @@ export class LamaParser extends CstParser {
 
   private readonly syntaxSeq = this.RULE('syntaxSeq', () => {
     this.AT_LEAST_ONE({
+      GATE: () => !this.BACKTRACK(this.curlyScopeExpression).apply(this),
       DEF: () => {
         this.SUBRULE(this.syntaxBinding)
       }
     })
     this.OPTION(() => {
       this.CONSUME(Tokens.LCurly)
-      this.SUBRULE(this.expression)
+      this.SUBRULE(this.scopeExpression)
       this.CONSUME(Tokens.RCurly)
     })
+  })
+
+  private readonly curlyScopeExpression = this.RULE('curlyScopeExpression', () => {
+    this.CONSUME(Tokens.LCurly)
+    this.SUBRULE(this.scopeExpression)
+    this.CONSUME(Tokens.RCurly)
   })
 
   private readonly syntaxBinding = this.RULE('syntaxBinding', () => {
@@ -589,7 +587,7 @@ export class LamaParser extends CstParser {
       {
         ALT: () => {
           this.CONSUME1(Tokens.LRound)
-          this.SUBRULE(this.syntaxExpression)
+          this.SUBRULE(this.syntaxSeq)
           this.CONSUME1(Tokens.RRound)
         }
       },

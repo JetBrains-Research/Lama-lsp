@@ -1,32 +1,25 @@
 import { IToken, CstNode } from 'chevrotain';
-import {Point} from 'unist'
 import { LamaParser } from './parser';
-import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren, DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, AsPatternCstChildren, CaseBranchPrefixCstChildren/* , CaseBranchCstChildren */} from './lama_cst';
-import { AbstractScope } from './scope'
-import { InterfaceItem } from './interface'
-import { Position } from 'unist'
+import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren, DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, AsPatternCstChildren, CaseBranchPrefixCstChildren,/* , CaseBranchCstChildren */
+CurlyScopeExpressionCstChildren} from './lama_cst';
+import { DefaultScope as Scope } from './Scope'
 import { DocumentUri } from 'vscode-languageserver-textdocument';
-import { TextDocumentIdentifier } from 'vscode-languageserver';
+import { Position, Range } from 'vscode-languageserver';
 //const debug = process.env.NODE_ENV === 'development'
 
-export class Scope extends AbstractScope<InterfaceItem & Position & TextDocumentIdentifier> { }
-
-function getStartPoint (token: IToken): Point {
-  return {
-    offset: token.startOffset,
-    line: token.startLine ?? 0,
-    column: token.startColumn ?? 0
-  }
+function getStartPosition (token: IToken): Position {
+  return Position.create(
+    token.startLine? - 1 : 0,
+    token.startColumn? - 1 : 0
+  )
 }
 
-function getEndPoint (token: IToken): Point {
-  return {
-    offset: token.endOffset,
-    line: token.endLine ?? 0,
-    column: token.endColumn ?? 0
-  }
+function getEndPosition (token: IToken): Position {
+  return Position.create(
+    token.endLine? - 1 : 0,
+    token.endColumn ?? 0
+  )
 }
-
 const parser = new LamaParser()
 const BaseLamaVisitor = parser.getBaseCstVisitorConstructor()
 
@@ -84,10 +77,10 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     const identifierToken = ctx.LIdentifier[0]
     if (ctx.Public || !this.only_public) {
       scope.add(identifierToken.image, {
-        type: 'F',
-        identifier: identifierToken.image,
-        start: getStartPoint(identifierToken),
-        end: getEndPoint(identifierToken),
+        range: Range.create(
+          getStartPosition(identifierToken),
+          getEndPosition(identifierToken),
+        ),
         uri: this.documentUri
       })
     }
@@ -120,10 +113,10 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     const identifier = operatorToken.image
     if (ctx.Public || !this.only_public) {
       scope.add(identifier, {
-        type: 'F',
-        identifier,
-        start: getStartPoint(operatorToken),
-        end: getEndPoint(operatorToken),
+        range: Range.create(
+          getStartPosition(operatorToken),
+          getEndPosition(operatorToken),
+        ),
         uri: this.documentUri
       })
     }
@@ -143,10 +136,10 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     const identifierToken = ctx.LIdentifier[0]
     const identifier = identifierToken.image
     scope.add(identifier, {
-      type: 'V',
-      identifier,
-      start: getStartPoint(identifierToken),
-      end: getEndPoint(identifierToken),
+      range: Range.create(
+        getStartPosition(identifierToken),
+        getEndPosition(identifierToken),
+      ),
       uri: this.documentUri
     }) 
     this.registerScope(ctx.LIdentifier, scope)
@@ -289,7 +282,11 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
 
   syntaxSeq(ctx: SyntaxSeqCstChildren, scope: Scope) {
     this.visit(ctx.syntaxBinding, scope)
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.scopeExpression, scope)
+  }
+
+  curlyScopeExpression(ctx: CurlyScopeExpressionCstChildren, scope: Scope): void {
+    
   }
 
   syntaxBinding(ctx: SyntaxBindingCstChildren, scope: Scope) {
@@ -304,7 +301,7 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
   syntaxPrimary(ctx: SyntaxPrimaryCstChildren, scope: Scope) {
     this.registerScope(ctx.LIdentifier, scope)
     this.visit(ctx.expression, scope)
-    this.visit(ctx.syntaxExpression, scope)
+    this.visit(ctx.syntaxSeq, scope)
   }
 
   postfix(ctx: PostfixCstChildren, scope: Scope) {
@@ -352,10 +349,10 @@ export class LamaVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scop
     const identifierToken = ctx.LIdentifier[0]
     const identifier = identifierToken.image
     scope.add(identifier, {
-      type: 'V',
-      identifier,
-      start: getStartPoint(identifierToken),
-      end: getEndPoint(identifierToken),
+      range: Range.create(
+        getStartPosition(identifierToken),
+        getEndPosition(identifierToken),
+      ),
       uri: this.documentUri
     })
     this.registerScope(ctx.LIdentifier, scope)

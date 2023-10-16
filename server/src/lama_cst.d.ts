@@ -194,8 +194,8 @@ export interface ListExpressionBodyCstNode extends CstNode {
 }
 
 export type ListExpressionBodyCstChildren = {
-  expression: (ExpressionCstNode)[];
-  Comma: (IToken)[];
+  expression?: ExpressionCstNode[];
+  Comma?: IToken[];
 };
 
 export interface SymbolExpressionCstNode extends CstNode {
@@ -272,10 +272,10 @@ export interface ForExpressionCstNode extends CstNode {
 
 export type ForExpressionCstChildren = {
   For: IToken[];
-  expression: (ExpressionCstNode)[];
+  scopeExpression: (ScopeExpressionCstNode)[];
   Comma: (IToken)[];
+  expression: (ExpressionCstNode)[];
   Do: IToken[];
-  scopeExpression: ScopeExpressionCstNode[];
   Od: IToken[];
 };
 
@@ -347,8 +347,19 @@ export interface SyntaxSeqCstNode extends CstNode {
 export type SyntaxSeqCstChildren = {
   syntaxBinding: SyntaxBindingCstNode[];
   LCurly?: IToken[];
-  expression?: ExpressionCstNode[];
+  scopeExpression?: ScopeExpressionCstNode[];
   RCurly?: IToken[];
+};
+
+export interface CurlyScopeExpressionCstNode extends CstNode {
+  name: "curlyScopeExpression";
+  children: CurlyScopeExpressionCstChildren;
+}
+
+export type CurlyScopeExpressionCstChildren = {
+  LCurly: IToken[];
+  scopeExpression: ScopeExpressionCstNode[];
+  RCurly: IToken[];
 };
 
 export interface SyntaxBindingCstNode extends CstNode {
@@ -387,7 +398,7 @@ export type SyntaxPrimaryCstChildren = {
   Comma?: IToken[];
   RSquare?: IToken[];
   LRound?: (IToken)[];
-  syntaxExpression?: SyntaxExpressionCstNode[];
+  syntaxSeq?: SyntaxSeqCstNode[];
   RRound?: (IToken)[];
   Dollar?: IToken[];
 };
@@ -450,6 +461,7 @@ export type SimplePatternCstChildren = {
   sExprPattern?: SExprPatternCstNode[];
   arrayPattern?: ArrayPatternCstNode[];
   listPattern?: ListPatternCstNode[];
+  asPattern?: AsPatternCstNode[];
   DecimalLiteral?: IToken[];
   StringLiteral?: IToken[];
   CharLiteral?: IToken[];
@@ -459,7 +471,6 @@ export type SimplePatternCstChildren = {
   LRound?: IToken[];
   pattern?: PatternCstNode[];
   RRound?: IToken[];
-  asPattern?: AsPatternCstNode[];
 };
 
 export interface SExprPatternCstNode extends CstNode {
@@ -538,6 +549,7 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   etaExpression(children: EtaExpressionCstChildren, param?: IN): OUT;
   syntaxExpression(children: SyntaxExpressionCstChildren, param?: IN): OUT;
   syntaxSeq(children: SyntaxSeqCstChildren, param?: IN): OUT;
+  curlyScopeExpression(children: CurlyScopeExpressionCstChildren, param?: IN): OUT;
   syntaxBinding(children: SyntaxBindingCstChildren, param?: IN): OUT;
   syntaxPostfix(children: SyntaxPostfixCstChildren, param?: IN): OUT;
   syntaxPrimary(children: SyntaxPrimaryCstChildren, param?: IN): OUT;

@@ -1,20 +1,12 @@
-import Ostap;
 import Fun;
+import Ostap;
+import Regression_test;
 
 fun gen (depth) {
   if depth == 0
   then "a"
   else gen (depth-1) ++ "*" ++ gen (depth-1)
   fi    
-}
-
-fun sum (x) {
-  parseString (
-    syntax (l=DECIMAL token[”+”] r=DECIMAL eof {
-          stringInt (l) + stringInt (r)
-          }) ,
-    x
-  )
 }
 
 var a   = token ("a"),

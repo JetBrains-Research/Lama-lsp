@@ -21,18 +21,10 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import {
-	LamaParser
-} from './parser';
-
-import { findDefinition, PositionToRange, fictiveRange, computeToken} from './go-to-definition';
-import { LocationLink, Location, DocumentUri } from 'vscode-languageserver';
-import * as pathFunctions from "path";
-import * as fs from "fs";
-import fileUriToPath = require("file-uri-to-path");
-import {
-	LamaVisitor, Scope
-} from './visitor';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable } from './go-to-definition';
+import { ensurePath, findLamaFiles } from './path-utils';
+import { LocationLink, Location } from 'vscode-languageserver';
+import { SymbolTables } from './SymbolTable';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -44,6 +36,8 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+
+let symbolTables = new SymbolTables();
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -70,7 +64,9 @@ connection.onInitialize((params: InitializeParams) => {
 				resolveProvider: true
 			}, */
 			// Tell the client that this server supports go to definition.
-			definitionProvider: true
+			definitionProvider: true,
+			referencesProvider: true,
+			documentHighlightProvider : true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -93,6 +89,12 @@ connection.onInitialized(() => {
 			connection.console.log('Workspace folder change event received.');
 		});
 	}
+	findLamaFiles().forEach((filePath) => {setSymbolTable(symbolTables, filePath);});
+	connection.workspace.getWorkspaceFolders().then((folders) => {
+		folders?.forEach((folder) => {
+			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {setSymbolTable(symbolTables, filePath);})
+		});
+	});
 });
 
 // The example settings
@@ -152,7 +154,7 @@ documents.onDidClose(e => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	validateTextDocument(change.document);
-	//reparse(change.document);
+	setSymbolTable(symbolTables, ensurePath(change.document.uri), change.document.getText());
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
@@ -243,150 +245,76 @@ connection.onDidChangeWatchedFiles(_change => {
 	}
 ); */
 
-function computeBaseUri(uri: string) {
-	const lastSep = uri.lastIndexOf("/");
-	if (lastSep > 0) {
-		/* uri = uri.substring(0, lastSep + 1); */
-		uri = uri.substring(0, lastSep);
-	} else {
-		uri = "";
-	}
-	return uri;
-}
-
-function findStdlib(): string {
-	let lamacPath = process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "";
-	if (lamacPath){
-		const lamaPath = computeBaseUri(computeBaseUri(lamacPath));
-		const path = lamaPath + "/share/Lama";
-		return path;
-	}
-	return "";
-}
-
-function processImports(imports: any[], uri: DocumentUri):Scope {
-
-	let stdlibPath = findStdlib();
-
-	const baseUri = computeBaseUri(uri);
-	const basePath = ensurePath(baseUri);
-	let init_scope = new Scope();
-	for(const i in imports) {
-		const filename = "/" + imports[i].image + ".lama";
-		const std_filepath = stdlibPath + filename;
-		const filepath = basePath + filename;
-		if (fs.existsSync(std_filepath)) {
-			const documentUri = "file://" + stdlibPath + filename;
-			init_scope = new Scope(processImport(std_filepath, init_scope, documentUri));
-		} else if (fs.existsSync(filepath)) {
-			const documentUri = baseUri + filename;
-			init_scope = new Scope(processImport(filepath, init_scope, documentUri));
-		} else {
-			connection.window.showErrorMessage("Imported file not found: " + std_filepath);
-		}
-	}
-	return init_scope;
-}
-
-function processImport(path: string, init_scope: Scope, documentUri: DocumentUri): Scope {
-	try {
-		const data = fs.readFileSync(path);
-		const input = data.toString();
-		const parser = new LamaParser();
-		const init_node = parser.parse(input);
-
-		const visitor = new LamaVisitor(documentUri, true);
-		visitor.visit(init_node, init_scope);
-		return init_scope;
-	} catch (e) {
-		connection.window.showErrorMessage("Cannot read from imported file " + path + ": " + e);
-		console.error(e);
-		return init_scope;
-	}
-}
-
-function ensurePath(path: string) {
-	if (path.startsWith("file:")) {
-		//Decode for Windows paths like /C%3A/...
-		let decoded = decodeURIComponent(fileUriToPath(path));
-		if(!decoded.startsWith("\\\\") && decoded.startsWith("\\")) {
-			//Windows doesn't seem to like paths like \C:\...
-			decoded = decoded.substring(1);
-		}
-		return decoded;
-	} else if(!pathFunctions.isAbsolute(path)) {
-		return pathFunctions.resolve(path);
-	} else {
-		return path;
-	}
-}
-
-//WIP                                                                      
 connection.onDefinition((params) => {
+	console.log(symbolTables);
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
 	if(document !== undefined) {
-		//const {parser, parseTree, visitor} = ensureParsed(document);    //4TODO - optimization with caching
-		const input = document.getText();      
-		const parser = new LamaParser();
-		const init_node = parser.parse(input); 
-
-		let init_scope = new Scope();
-		const imports = init_node.children.UIdentifier;
-		if(imports) {
-			init_scope = processImports(imports, uri);
-		}
-		/* console.log(init_node); */
-		/* parser.lex(input);  */
-		const visitor = new LamaVisitor(uri, false);
-		visitor.visit(init_node, init_scope);
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
-		if(parser.lexingResult) {
-			const token = computeToken(init_node, offset);		
-			if(token && token.scope) {					                    
-				const definition = findDefinition(token.image, token.scope);           
-				if(definition !== undefined) {
-					const targetSelectionRange = PositionToRange(definition);
-					const location = Location.create(definition.uri, targetSelectionRange); //2TODO LocationLink[] - ??
+		const path = ensurePath(uri);
+		const initNode = symbolTables.getPT(path);
+		const token = computeToken(initNode, offset);		
+		if(token && token.scope) {
+			const defScope = findDefScope(token, path, symbolTables);           
+			if(defScope) {
+				const definition = defScope.get(token.image);
+				if(definition) {
+					const location = Location.create(definition.uri, definition.range); //TODO LocationLink[] - ??
 					return location;
 				}
 			}
 		}
-		/* const smth_for_test = connection.sendRequest('c/textDocument/definition', params);
-		console.log(smth_for_test); */
 	}  
 	return undefined;
 });
 
-/* function markForReparsing(document: TextDocument) {
-	document["parser"] = undefined;
-	document["parseTree"] = undefined;
-	document["symbolTableVisitor"] = undefined;
-} */
+connection.onReferences((params) => {
+	const uri = params.textDocument.uri;
+	const document = documents.get(uri);
+	if(document !== undefined) {
+		const pos = params.position;
+		const offset = document.offsetAt(pos);
+		const filePath = ensurePath(uri);
+		const initNode = symbolTables.getPT(filePath);
+		const token = computeToken(initNode, offset);	
+		const fileSymbolTable = symbolTables.getST(filePath);	
+		if(token && token.scope) {					                    
+			const defScope = findDefScope(token, filePath, symbolTables);           
+			if(defScope) {
+				let references: Location[] = defScope.getReferences(token.image) || [];
+				if(defScope === fileSymbolTable?.publicScope) {
+					for(const modulePath of symbolTables.importedBy[filePath] || []) {
+						if(findDefScope(token.image, modulePath, symbolTables) === defScope, symbolTables.getST(modulePath)?.publicScope) {
+							references = references.concat(symbolTables.getST(modulePath)?.publicScope.getReferences(token.image) || []);
+						}
+					}
+				}
+				return references;
+			}
+		}
+	}  
+	return undefined;
+});
 
-/*function ensureParsed(document: TextDocument) {
-	if(document["parser"]) {
-		return { parser: document["parser"], parseTree: document["parseTree"] , visitor: document["symbolTableVisitor"] };
+connection.onDocumentHighlight((params) => {
+	const uri = params.textDocument.uri;
+	const document = documents.get(uri);
+	if(document !== undefined) {
+		const pos = params.position;
+		const offset = document.offsetAt(pos);
+		const filePath = ensurePath(uri);
+		const initNode = symbolTables.getPT(filePath);
+		const token = computeToken(initNode, offset);
+		if(token && token.scope) {					                    
+			const defScope = findScopeInFile(token);           
+			if(defScope) {
+				return defScope.getReferences(token.image);
+			}
+		}
 	}
-	const input = document.getText(); //не уверен, что сработает
-	const parser = new LamaParser();
-	const parseTree = parser.parse(input);//не уверен, что сработает
-	const symbolTableVisitor = new SymbolTableVisitor(document.uri); 
-
-	const imports = parseTree?.preamble()?.importList()?.importHeader();
-	if(imports) {
-		processImports(imports, symbolTableVisitor);
-	}
-	symbolTableVisitor.visit(parseTree);
-
-	document["parser"] = parser;
-	document["parseTree"] = parseTree;
-	document["symbolTableVisitor"] = symbolTableVisitor;
-	return {parser, parseTree , visitor: symbolTableVisitor};
-} */
-
-
+	return undefined;
+});
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

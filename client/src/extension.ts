@@ -14,6 +14,7 @@ import {
 } from 'vscode-languageclient/node';
 
 import {exec} from 'child_process';
+import { ConnectionError } from 'vscode-languageserver';
 
 let client: LanguageClient;
 
@@ -70,6 +71,8 @@ export function activate(context: ExtensionContext) {
 		}
 		client.start();
 		});
+	
+	client.onRequest('log_info', node => console.log(node));
 
 }
 

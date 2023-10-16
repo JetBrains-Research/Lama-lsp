@@ -961,7 +961,7 @@
             },
             "patterns": [
                 {
-                    "include": "#expression"
+                    "include": "#scope-expression"
                 }
             ]
         },
@@ -1110,7 +1110,7 @@
                             "include": "#comment"
                         },
                         {
-                            "include": "#syntax-expression"
+                            "include": "#syntax-seq"
                         }
                     ]
                 }
