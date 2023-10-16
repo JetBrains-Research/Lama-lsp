@@ -1,10 +1,10 @@
 {
-	"name": "lsp-lama",
+	"name": "lama-lsp",
 	"description": "Lama language server",
-	"author": "Artem Savelev",
+	"author": "Savelev Artem",
 	"license": "MIT",
 	"version": "1.0.0",
-	"publisher": "arsavelev",
+	"publisher": "mrartemsav",
 	"categories": [
 		"Programming Languages"
 	],
