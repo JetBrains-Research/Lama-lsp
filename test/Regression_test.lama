@@ -1,0 +1,25 @@
+import Sample_import;
+import Sample_import_2;
+import Does_not_exist;
+
+var a = y + 4;
+
+var b = z - 3;
+
+var c = dd + pp;
+
+fun f (x) {
+   fun inner1 (y) {
+     if y == 0 then 0 else inner2 (y-1) fi
+  }
+  
+  fun inner2 (y) {
+     if y == 0 then 0 else inner1 (y-1) fi
+  }  
+
+   inner1 (x)
+}
+
+var n = read ();
+
+write ((fun (x) { x+2} ** fun (x) { x+3})(7))
