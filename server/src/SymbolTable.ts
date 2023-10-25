@@ -46,5 +46,11 @@ export class SymbolTables {
   public getPT (uri: string): CstNode | undefined {
     return this.parseTrees[uri]
   } 
+
+  public deleteST (uri: string): void {
+    if(this.symbolTables[uri]) {
+      delete(this.symbolTables[uri]);
+    }
+  }
   
 }

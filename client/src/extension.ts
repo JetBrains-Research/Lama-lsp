@@ -72,6 +72,10 @@ export function activate(context: ExtensionContext) {
 		client.start();
 		});
 	
+	workspace.onDidRenameFiles(inf => {
+		client.sendNotification('fileRename', inf.files[0]);
+	});
+	
 	client.onRequest('log_info', node => console.log(node));
 
 }

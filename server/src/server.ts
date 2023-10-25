@@ -21,10 +21,10 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable } from './go-to-definition';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy } from './go-to-definition';
 import { ensurePath, findLamaFiles } from './path-utils';
 import { LocationLink, Location } from 'vscode-languageserver';
-import { SymbolTables } from './SymbolTable';
+import { SymbolTable, SymbolTables } from './SymbolTable';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -96,6 +96,11 @@ connection.onInitialized(() => {
 			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {setSymbolTable(symbolTables, filePath);});
 		});
 	});
+	connection.workspace.getWorkspaceFolders().then((folders) => {
+		folders?.forEach((folder) => {
+			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {checkDefinitions(filePath, []);});
+		});
+	});
 });
 
 // The example settings
@@ -123,7 +128,7 @@ connection.onDidChangeConfiguration(change => {
 	}
 
 	// Revalidate all open text documents
-	documents.all().forEach(validateTextDocument);
+	/* documents.all().forEach(validateTextDocument); */
 });
 
 function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -150,20 +155,30 @@ documents.onDidClose(e => {
 	markForReparsing(document);
 	ensureParsed(document);
 } */
+connection.onNotification('fileRename', files => {
+	const oldPath = files.oldUri.path;
+	removeImportedBy(symbolTables, oldPath);
+	const ST = symbolTables.getST(oldPath);
+	symbolTables.deleteST(oldPath);
+	const newPath = files.newUri.path;
+	if(ST) {
+		symbolTables.updateST(newPath, ST);
+		addImportedBy(symbolTables, newPath);
+	}
+});
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	validateTextDocument(change.document);
 	const filePath = ensurePath(change.document.uri);
 	setSymbolTable(symbolTables, filePath, change.document.getText());
-	checkDefinitions(filePath);
-	symbolTables.importedBy[filePath].forEach(modulePath => checkDefinitions(modulePath));
+	validateFile(filePath);
+	/* console.log(symbolTables); */
 });
 
-async function validateTextDocument(textDocument: TextDocument): Promise<void> {
+/* async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
-	/* const settings = await getDocumentSettings(textDocument.uri);
+	const settings = await getDocumentSettings(textDocument.uri);
 
 	// The validator creates diagnostics for all uppercase words length 2 and more
 	const text = textDocument.getText();
@@ -205,12 +220,18 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	}
 
 	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics }); */
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+} */
+
+function validateFile(filePath: string) {
+	let diagnostics: Diagnostic[] = [];
+	checkDefinitions(filePath, diagnostics);
+	symbolTables.importedBy[filePath]?.forEach(modulePath => checkDefinitions(modulePath, []));
+	findParseErrors(filePath, diagnostics);
 }
 
-function checkDefinitions(filePath: string) {
+function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 	const pScope = symbolTables.getST(filePath)?.publicScope;
-	let diagnostics: Diagnostic[] = [];
 	pScope?.getRefNames().forEach((name) => {
 		if(!LAMA_DEFAULTS.has(name) && !findDefScope(name, filePath, symbolTables)) {
 			pScope.getReferences(name)?.forEach(location => {
@@ -227,10 +248,35 @@ function checkDefinitions(filePath: string) {
 	connection.sendDiagnostics({uri: 'file://' + filePath, diagnostics});
 }
 
+function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
+	const initNode = symbolTables.getPT(filePath);
+	if(initNode) {
+		findRecoveredNode(initNode).forEach(node => {
+			console.log(node);
+			if(node.location) {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Warning,
+				range:  {
+					start: {line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0}, 
+					end: {line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0}},
+				message: `Parse error`,
+				source: 'lama-lsp'
+			};
+			diagnostics.push(diagnostic);
+			}
+		});
+	}
+	connection.sendDiagnostics({uri: 'file://' + filePath, diagnostics});
+}
+
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
 	connection.console.log('We received an file change event');
 });
+
+/* connection.onDidChangeTextDocument(change => {
+	connection.console.log(change.contentChanges.toString());
+}); */
 
 // This handler provides the initial list of the completion items.
 /* connection.onCompletion(

@@ -101,7 +101,7 @@ export function findRecoveredNode(node: CstNode | IToken): CstNode[] {
     return [];
 }
 
-function removeImportedBy(symbolTables: SymbolTables, path: string): void {
+export function removeImportedBy(symbolTables: SymbolTables, path: string): void {
     const imports = symbolTables.getST(path)?.imports;
     for (const moduleName of imports ?? []) {
         const modulePath = findPath(moduleName, path);
@@ -109,7 +109,7 @@ function removeImportedBy(symbolTables: SymbolTables, path: string): void {
     }
 }
 
-function addImportedBy(symbolTables: SymbolTables, path: string): void {
+export function addImportedBy(symbolTables: SymbolTables, path: string): void {
     const imports = symbolTables.getST(path)?.imports;
     for (const moduleName of imports ?? []) {
         const modulePath = findPath(moduleName, path);

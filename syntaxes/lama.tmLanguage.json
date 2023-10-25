@@ -53,7 +53,7 @@
             "begin": "\\b(?:(var)|(public))\\b",
             "beginCaptures": {
                 "1": {
-                    "name": "storage.modifier.var.lama"
+                    "name": "storage.type.var.lama"
                 },
                 "2": {
                     "name": "storage.modifier.public.lama"
@@ -1022,7 +1022,8 @@
                 }
             ]
         },
-        "syntax-binding": {
+        "syntax-binding-old": {
+            "disabled": 1,
             "patterns": [
                 {
                     "include": "#comment"
@@ -1058,6 +1059,44 @@
                     }
                 }
             ]
+        },
+        "syntax-binding": {
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "match": "-",
+                    "captures": {
+                        "0": {
+                            "name": "keyword.operator.unary.minus.lama"
+                        }
+                    }
+                },
+                {
+                    "include": "#pattern-equal"
+                },
+                {
+                    "include": "#syntax-primary"
+                },
+                {
+                    "match": "[*+?]",
+                    "captures": {
+                        "0": {
+                            "name": "keyword.operator.postfix.syntax.lama"
+                        }
+                    }
+                }
+            ]
+        },
+        "pattern-equal" : {
+            "begin": "\\b(#pattern)\\b",
+            "end": "\\b(=)\\b",
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.assignment.lama"
+                }
+            }
         },
         "syntax-primary": {
             "patterns": [
@@ -1323,7 +1362,7 @@
             ]
         },
         "name-pattern": {
-            "name": "variable.parameter.lama",
+            "name": "variable.parameter.np.lama",
             "match": "\\b(?!(?:after|array|at|before|box|case|do|elif|else|esac|eta|false|fi|for|fun|if|import|infix|infixl|infixr|lazy|length|var|od|of|public|sexp|skip|str|string|syntax|then|true|val|var|while)\\b)([a-z][a-zA-Z_0-9]*)\\b"
         },
 
