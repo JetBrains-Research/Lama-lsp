@@ -41,6 +41,10 @@ export class AbstractScope<T> {
 	public getReferences (identifier: string): [Location] | undefined {
 	  return this.referencesDict[identifier]
 	}
+
+	public getRefNames (): string[] {
+	  return Object.keys(this.referencesDict)
+	}
   }
 
 export class DefaultScope extends AbstractScope<Location> {}

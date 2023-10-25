@@ -31,10 +31,9 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
     }
 }
 
-export function findDefScope(token: any, path: string, symbolTables: SymbolTables, scope?: Scope): Scope | undefined {
-    const name = token.image;
+export function findDefScope(name: string, path: string, symbolTables: SymbolTables, scope?: Scope): Scope | undefined {
     if(!scope) {
-        scope = token.scope;
+        scope = symbolTables.getST(path)?.publicScope;
     } 
     while (scope !== undefined) {
         if(scope.has(name)) {

@@ -12,8 +12,8 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 	constructor(
 		public documentUri: DocumentUri
 	) {
-		super()
-		this.validateVisitor()
+		super();
+		this.validateVisitor();
 	}
 
 	visit(node: any, param?: any) {
@@ -46,60 +46,60 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 	}
 
 	functionDefinition(ctx: FunctionDefinitionCstChildren) { 
-		this.registerReference(ctx.LIdentifier)
-		this.visit(ctx.functionArguments)
-		this.visit(ctx.functionBody)
+		this.registerReference(ctx.LIdentifier);
+		this.visit(ctx.functionArguments);
+		this.visit(ctx.functionBody);
 	}
 	
 	infixDefinition(ctx: InfixDefinitionCstChildren) {    
-		this.registerReference(ctx.Operator)
-		this.visit(ctx.functionArguments)
-		this.visit(ctx.functionBody)
+		this.registerReference(ctx.Operator);
+		this.visit(ctx.functionArguments);
+		this.visit(ctx.functionBody);
 	}
 
 	variableDefinitionItem(ctx: VariableDefinitionItemCstChildren) {
-		this.registerReference(ctx.LIdentifier)
-		this.visit(ctx.basicExpression)
+		this.registerReference(ctx.LIdentifier);
+		this.visit(ctx.basicExpression);
 	}
 
 	basicExpression(ctx: BasicExpressionCstChildren) {
-		this.registerReference(ctx.Operator)
-		this.visit(ctx.postfixExpression)
+		this.registerReference(ctx.Operator);
+		this.visit(ctx.postfixExpression);
 	}
 
 	primary(ctx: PrimaryCstChildren){   
-		this.registerReference(ctx.LIdentifier)
-		this.registerReference(ctx.Operator)
-		this.visit(ctx.functionArguments)
-		this.visit(ctx.functionBody)
-		this.visit(ctx.listExpressionBody)
-		this.visit(ctx.scopeExpression)
-		this.visit(ctx.arrayExpression)
-		this.visit(ctx.symbolExpression)
-		this.visit(ctx.ifExpression)
-		this.visit(ctx.whileDoExpression)
-		this.visit(ctx.doWhileExpression)
-		this.visit(ctx.forExpression)
-		this.visit(ctx.caseExpression)
-		this.visit(ctx.lazyExpression)
-		this.visit(ctx.etaExpression)
-		this.visit(ctx.syntaxExpression)
+		this.registerReference(ctx.LIdentifier);
+		this.registerReference(ctx.Operator);
+		this.visit(ctx.functionArguments);
+		this.visit(ctx.functionBody);
+		this.visit(ctx.listExpressionBody);
+		this.visit(ctx.scopeExpression);
+		this.visit(ctx.arrayExpression);
+		this.visit(ctx.symbolExpression);
+		this.visit(ctx.ifExpression);
+		this.visit(ctx.whileDoExpression);
+		this.visit(ctx.doWhileExpression);
+		this.visit(ctx.forExpression);
+		this.visit(ctx.caseExpression);
+		this.visit(ctx.lazyExpression);
+		this.visit(ctx.etaExpression);
+		this.visit(ctx.syntaxExpression);
 	}
 
 	syntaxPrimary(ctx: SyntaxPrimaryCstChildren) {
-		this.registerReference(ctx.LIdentifier)
-		this.visit(ctx.expression)
-		this.visit(ctx.syntaxSeq)
+		this.registerReference(ctx.LIdentifier);
+		this.visit(ctx.expression);
+		this.visit(ctx.syntaxSeq);
 	}
 	
 	postfix(ctx: PostfixCstChildren) {
-		this.registerReference(ctx.LIdentifier)
-		this.visit(ctx.postfixCall)
-		this.visit(ctx.postfixIndex)
+		this.registerReference(ctx.LIdentifier);
+		this.visit(ctx.postfixCall);
+		this.visit(ctx.postfixIndex);
 	}
 
 	asPattern(ctx: AsPatternCstChildren) {
-		this.registerReference(ctx.LIdentifier)
-		this.visit(ctx.pattern)
+		this.registerReference(ctx.LIdentifier);
+		this.visit(ctx.pattern);
 	}
 }

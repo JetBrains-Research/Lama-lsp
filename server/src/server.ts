@@ -37,7 +37,8 @@ let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
-let symbolTables = new SymbolTables();
+const symbolTables = new SymbolTables();
+const LAMA_DEFAULTS: Set<string> = new Set(['+', '-', '*', '/', ':=', ':', '!!', '&&', '==', '!=', '<=', '<', '>=', '>', '%']);
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -92,7 +93,7 @@ connection.onInitialized(() => {
 	findLamaFiles().forEach((filePath) => {setSymbolTable(symbolTables, filePath);});
 	connection.workspace.getWorkspaceFolders().then((folders) => {
 		folders?.forEach((folder) => {
-			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {setSymbolTable(symbolTables, filePath);})
+			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {setSymbolTable(symbolTables, filePath);});
 		});
 	});
 });
@@ -154,7 +155,10 @@ documents.onDidClose(e => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	validateTextDocument(change.document);
-	setSymbolTable(symbolTables, ensurePath(change.document.uri), change.document.getText());
+	const filePath = ensurePath(change.document.uri);
+	setSymbolTable(symbolTables, filePath, change.document.getText());
+	checkDefinitions(filePath);
+	symbolTables.importedBy[filePath].forEach(modulePath => checkDefinitions(modulePath));
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
@@ -197,11 +201,30 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 				}
 			];
 		}
-		diagnostics.push(diagnostic);
+		diagnostics.push(diagnostic);	
 	}
 
 	// Send the computed diagnostics to VSCode.
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics }); */
+}
+
+function checkDefinitions(filePath: string) {
+	const pScope = symbolTables.getST(filePath)?.publicScope;
+	let diagnostics: Diagnostic[] = [];
+	pScope?.getRefNames().forEach((name) => {
+		if(!LAMA_DEFAULTS.has(name) && !findDefScope(name, filePath, symbolTables)) {
+			pScope.getReferences(name)?.forEach(location => {
+				const diagnostic: Diagnostic = {
+					severity: DiagnosticSeverity.Error,
+					range: location.range,
+					message: `Cannot find name '` + name + `'.`,
+					source: 'lama-lsp'
+				};
+				diagnostics.push(diagnostic);
+			});
+		}
+	})
+	connection.sendDiagnostics({uri: 'file://' + filePath, diagnostics});
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -246,7 +269,7 @@ connection.onDidChangeWatchedFiles(_change => {
 ); */
 
 connection.onDefinition((params) => {
-	console.log(symbolTables);
+	/* console.log(symbolTables); */
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
 	if(document !== undefined) {
@@ -256,7 +279,7 @@ connection.onDefinition((params) => {
 		const initNode = symbolTables.getPT(path);
 		const token = computeToken(initNode, offset);		
 		if(token && token.scope) {
-			const defScope = findDefScope(token, path, symbolTables);           
+			const defScope = findDefScope(token.image, path, symbolTables, token.scope);           
 			if(defScope) {
 				const definition = defScope.get(token.image);
 				if(definition) {
@@ -280,12 +303,12 @@ connection.onReferences((params) => {
 		const token = computeToken(initNode, offset);	
 		const fileSymbolTable = symbolTables.getST(filePath);	
 		if(token && token.scope) {					                    
-			const defScope = findDefScope(token, filePath, symbolTables);           
+			const defScope = findDefScope(token.image, filePath, symbolTables, token.scope);           
 			if(defScope) {
 				let references: Location[] = defScope.getReferences(token.image) || [];
 				if(defScope === fileSymbolTable?.publicScope) {
 					for(const modulePath of symbolTables.importedBy[filePath] || []) {
-						if(findDefScope(token.image, modulePath, symbolTables) === defScope, symbolTables.getST(modulePath)?.publicScope) {
+						if(findDefScope(token.image, modulePath, symbolTables) === defScope) {
 							references = references.concat(symbolTables.getST(modulePath)?.publicScope.getReferences(token.image) || []);
 						}
 					}
