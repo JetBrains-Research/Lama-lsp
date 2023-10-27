@@ -23,8 +23,9 @@ import {
 
 import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy } from './go-to-definition';
 import { ensurePath, findLamaFiles } from './path-utils';
-import { LocationLink, Location } from 'vscode-languageserver';
+import { LocationLink, Location, TextEdit, Range, Position } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
+import { formatTextDocument } from './formatter';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -67,7 +68,8 @@ connection.onInitialize((params: InitializeParams) => {
 			// Tell the client that this server supports go to definition.
 			definitionProvider: true,
 			referencesProvider: true,
-			documentHighlightProvider : true
+			documentHighlightProvider: true,
+			documentFormattingProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -90,15 +92,15 @@ connection.onInitialized(() => {
 			connection.console.log('Workspace folder change event received.');
 		});
 	}
-	findLamaFiles().forEach((filePath) => {setSymbolTable(symbolTables, filePath);});
+	findLamaFiles().forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
 	connection.workspace.getWorkspaceFolders().then((folders) => {
 		folders?.forEach((folder) => {
-			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {setSymbolTable(symbolTables, filePath);});
+			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
 		});
 	});
 	connection.workspace.getWorkspaceFolders().then((folders) => {
 		folders?.forEach((folder) => {
-			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => {checkDefinitions(filePath, []);});
+			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { validateFile(filePath, false); });
 		});
 	});
 });
@@ -161,7 +163,7 @@ connection.onNotification('fileRename', files => {
 	const ST = symbolTables.getST(oldPath);
 	symbolTables.deleteST(oldPath);
 	const newPath = files.newUri.path;
-	if(ST) {
+	if (ST) {
 		symbolTables.updateST(newPath, ST);
 		addImportedBy(symbolTables, newPath);
 	}
@@ -172,7 +174,7 @@ connection.onNotification('fileRename', files => {
 documents.onDidChangeContent(change => {
 	const filePath = ensurePath(change.document.uri);
 	setSymbolTable(symbolTables, filePath, change.document.getText());
-	validateFile(filePath);
+	validateFile(filePath, true);
 	/* console.log(symbolTables); */
 });
 
@@ -223,17 +225,19 @@ documents.onDidChangeContent(change => {
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 } */
 
-function validateFile(filePath: string) {
+function validateFile(filePath: string, alsoImported?: boolean) {
 	let diagnostics: Diagnostic[] = [];
 	checkDefinitions(filePath, diagnostics);
-	symbolTables.importedBy[filePath]?.forEach(modulePath => checkDefinitions(modulePath, []));
 	findParseErrors(filePath, diagnostics);
+	if (alsoImported) {
+		symbolTables.importedBy[filePath]?.forEach(modulePath => validateFile(modulePath, false));
+	}
 }
 
 function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 	const pScope = symbolTables.getST(filePath)?.publicScope;
 	pScope?.getRefNames().forEach((name) => {
-		if(!LAMA_DEFAULTS.has(name) && !findDefScope(name, filePath, symbolTables)) {
+		if (!LAMA_DEFAULTS.has(name) && !findDefScope(name, filePath, symbolTables)) {
 			pScope.getReferences(name)?.forEach(location => {
 				const diagnostic: Diagnostic = {
 					severity: DiagnosticSeverity.Error,
@@ -245,28 +249,29 @@ function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 			});
 		}
 	})
-	connection.sendDiagnostics({uri: 'file://' + filePath, diagnostics});
+	connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
 }
 
 function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 	const initNode = symbolTables.getPT(filePath);
-	if(initNode) {
+	if (initNode) {
 		findRecoveredNode(initNode).forEach(node => {
-			console.log(node);
-			if(node.location) {
-			const diagnostic: Diagnostic = {
-				severity: DiagnosticSeverity.Warning,
-				range:  {
-					start: {line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0}, 
-					end: {line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0}},
-				message: `Parse error`,
-				source: 'lama-lsp'
-			};
-			diagnostics.push(diagnostic);
+			/* console.log(node); */
+			if (node.location) {
+				const diagnostic: Diagnostic = {
+					severity: DiagnosticSeverity.Warning,
+					range: {
+						start: { line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0 },
+						end: { line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0 }
+					},
+					message: `Parse error. Was expected: ` + node.name,
+					source: 'lama-lsp'
+				};
+				diagnostics.push(diagnostic);
 			}
 		});
 	}
-	connection.sendDiagnostics({uri: 'file://' + filePath, diagnostics});
+	connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -318,43 +323,43 @@ connection.onDefinition((params) => {
 	/* console.log(symbolTables); */
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
-	if(document !== undefined) {
+	if (document !== undefined) {
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
 		const path = ensurePath(uri);
 		const initNode = symbolTables.getPT(path);
-		const token = computeToken(initNode, offset);		
-		if(token && token.scope) {
-			const defScope = findDefScope(token.image, path, symbolTables, token.scope);           
-			if(defScope) {
+		const token = computeToken(initNode, offset);
+		if (token && token.scope) {
+			const defScope = findDefScope(token.image, path, symbolTables, token.scope);
+			if (defScope) {
 				const definition = defScope.get(token.image);
-				if(definition) {
+				if (definition) {
 					const location = Location.create(definition.uri, definition.range); //TODO LocationLink[] - ??
 					return location;
 				}
 			}
 		}
-	}  
+	}
 	return undefined;
 });
 
 connection.onReferences((params) => {
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
-	if(document !== undefined) {
+	if (document !== undefined) {
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
 		const filePath = ensurePath(uri);
 		const initNode = symbolTables.getPT(filePath);
-		const token = computeToken(initNode, offset);	
-		const fileSymbolTable = symbolTables.getST(filePath);	
-		if(token && token.scope) {					                    
-			const defScope = findDefScope(token.image, filePath, symbolTables, token.scope);           
-			if(defScope) {
+		const token = computeToken(initNode, offset);
+		const fileSymbolTable = symbolTables.getST(filePath);
+		if (token && token.scope) {
+			const defScope = findDefScope(token.image, filePath, symbolTables, token.scope);
+			if (defScope) {
 				let references: Location[] = defScope.getReferences(token.image) || [];
-				if(defScope === fileSymbolTable?.publicScope) {
-					for(const modulePath of symbolTables.importedBy[filePath] || []) {
-						if(findDefScope(token.image, modulePath, symbolTables) === defScope) {
+				if (defScope === fileSymbolTable?.publicScope) {
+					for (const modulePath of symbolTables.importedBy[filePath] || []) {
+						if (findDefScope(token.image, modulePath, symbolTables) === defScope) {
 							references = references.concat(symbolTables.getST(modulePath)?.publicScope.getReferences(token.image) || []);
 						}
 					}
@@ -362,27 +367,38 @@ connection.onReferences((params) => {
 				return references;
 			}
 		}
-	}  
+	}
 	return undefined;
 });
 
 connection.onDocumentHighlight((params) => {
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
-	if(document !== undefined) {
+	if (document !== undefined) {
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
 		const filePath = ensurePath(uri);
 		const initNode = symbolTables.getPT(filePath);
 		const token = computeToken(initNode, offset);
-		if(token && token.scope) {					                    
-			const defScope = findScopeInFile(token);           
-			if(defScope) {
+		if (token && token.scope) {
+			const defScope = findScopeInFile(token);
+			if (defScope) {
 				return defScope.getReferences(token.image);
 			}
 		}
 	}
 	return undefined;
+});
+
+connection.onDocumentFormatting(async(params) => {
+	const textDocument = documents.get(params.textDocument.uri);
+    if (textDocument) {
+		const filePath = ensurePath(params.textDocument.uri);
+        const formattedText = formatTextDocument(textDocument.getText());
+        const newText = formattedText.join('\n');
+        const range = Range.create(Position.create(0, 0), Position.create(formattedText.length, 0));
+        return [TextEdit.replace(range, newText)];
+    }
 });
 
 // Make the text document manager listen on the connection
