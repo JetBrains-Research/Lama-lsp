@@ -27,7 +27,7 @@ export class LamaParser extends CstParser {
     return this.compilationUnit()
   }
 
-  public lex (text: string): any{
+  public lex (text: string): IToken[]{
     return lexer.tokenize(text).tokens
   }
 
