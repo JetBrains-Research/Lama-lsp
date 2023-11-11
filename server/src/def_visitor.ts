@@ -6,14 +6,14 @@ import { DefaultScope as Scope } from './Scope';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 import { Range, Position } from 'vscode-languageserver';
 
-function getStartPosition (token: IToken): Position {
+export function getStartPosition (token: any /* IToken */): Position {
   return Position.create(
     token.startLine? token.startLine - 1 : 0,
     token.startColumn? token.startColumn - 1 : 0
   )
 }
 
-function getEndPosition (token: IToken): Position {
+export function getEndPosition (token: any /* IToken */): Position {
   return Position.create(
     token.endLine? token.endLine - 1 : 0,
     token.endColumn? token.endColumn - 1 : 0

@@ -1,4 +1,5 @@
 import { Location } from 'vscode-languageserver'
+import { IToken } from 'chevrotain'
 
 export class AbstractScope<T> {
 	private readonly definitions: {
@@ -8,12 +9,17 @@ export class AbstractScope<T> {
 	private readonly referencesDict: {
 	  [identifier: string]: [Location]
 	}
+
+	private readonly fArgs: {
+		[identifier: string]: string
+	}
   
 	public parent: AbstractScope<T> | undefined
   
 	constructor (parent?: AbstractScope<T>) {
 	  this.definitions = parent === undefined ? {} : Object.create(parent)
 	  this.referencesDict = {}
+	  this.fArgs = {}
 	  this.parent = parent
 	}
   
@@ -45,6 +51,14 @@ export class AbstractScope<T> {
 	public getRefNames (): string[] {
 	  return Object.keys(this.referencesDict)
 	}
+
+	public addFArgs (identifier: string, names: string[]): void {
+		this.fArgs[identifier] = names.join(', ');
+	}
+
+	public getFArgs (identifier: string): string {
+		return this.fArgs[identifier];
+	}
   }
 
-export class DefaultScope extends AbstractScope<Location> {}
+export class DefaultScope extends AbstractScope< Location > {}

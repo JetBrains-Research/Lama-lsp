@@ -26,6 +26,7 @@ import { ensurePath, findLamaFiles } from './path-utils';
 import { LocationLink, Location, TextEdit, Range, Position } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
+import {getStartPosition, getEndPosition} from './def_visitor'
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -69,7 +70,8 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			referencesProvider: true,
 			documentHighlightProvider: true,
-			documentFormattingProvider: true
+			documentFormattingProvider: true,
+			hoverProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -400,6 +402,43 @@ connection.onDocumentFormatting(async(params) => {
         return [TextEdit.replace(range, newText)];
     }
 });
+
+connection.onHover(params => {
+	const document = documents.get(params.textDocument.uri);
+	const filePath = ensurePath(params.textDocument.uri);
+	if (document) {
+		const pos = params.position;
+		const offset = document.offsetAt(pos);
+		const initNode = symbolTables.getPT(filePath);
+		const token = computeToken(initNode, offset);
+		if (token && token.scope) {
+			const defScope = findDefScope(token.image, filePath, symbolTables, token.scope);
+			if (defScope) {
+				const funArgs = defScope.getFArgs(token.image);
+				if (funArgs) {
+					return {
+						contents: `fun ${token?.image} (${funArgs})`,
+						range: {
+							start: getStartPosition(token),
+							end: getEndPosition(token)
+						}
+					};
+				}
+			}
+		}
+		/* const hoveredInfo = getHoveredInfo(document, offset); */
+		if (token?.image) {
+            return {
+                contents: `Hovered: ${token?.image}` ,
+            };
+        }
+	}
+	return undefined;
+});
+
+function getHoveredInfo(document: any, offset: any) {
+
+}
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

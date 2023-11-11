@@ -4,6 +4,7 @@ import { CstNode, IToken } from 'chevrotain';
 import { LamaParser } from './parser';
 import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
+import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
@@ -22,8 +23,11 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
         let symbolTable = new SymbolTable(publicScope);
         symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
 
-        const refVisitor = new ReferenceVisitor('file://' + filePath);
-        refVisitor.visit(initNode);
+/*         const refVisitor = new ReferenceVisitor('file://' + filePath);
+        refVisitor.visit(initNode); */
+
+        const hoverVisitor = new HoverVisitor('file://' + filePath);
+        hoverVisitor.visit(initNode);    
 
         symbolTables.updatePT(filePath, initNode);
         symbolTables.updateST(filePath, symbolTable);
