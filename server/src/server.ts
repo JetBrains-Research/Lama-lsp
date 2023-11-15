@@ -21,12 +21,14 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy } from './go-to-definition';
-import { ensurePath, findLamaFiles } from './path-utils';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange } from './go-to-definition';
+import { ensurePath, findLamaFiles, findPath } from './path-utils';
 import { LocationLink, Location, TextEdit, Range, Position } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
 import {getStartPosition, getEndPosition} from './def_visitor'
+import * as fs from 'fs';
+import { IToken } from 'chevrotain';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -71,7 +73,8 @@ connection.onInitialize((params: InitializeParams) => {
 			referencesProvider: true,
 			documentHighlightProvider: true,
 			documentFormattingProvider: true,
-			hoverProvider: true
+			hoverProvider: true,
+			/* renameProvider: true */
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -231,6 +234,8 @@ function validateFile(filePath: string, alsoImported?: boolean) {
 	let diagnostics: Diagnostic[] = [];
 	checkDefinitions(filePath, diagnostics);
 	findParseErrors(filePath, diagnostics);
+	checkImports(filePath, diagnostics);
+	connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
 	if (alsoImported) {
 		symbolTables.importedBy[filePath]?.forEach(modulePath => validateFile(modulePath, false));
 	}
@@ -251,7 +256,7 @@ function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 			});
 		}
 	})
-	connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
+	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
 }
 
 function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
@@ -261,7 +266,7 @@ function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 			/* console.log(node); */
 			if (node.location) {
 				const diagnostic: Diagnostic = {
-					severity: DiagnosticSeverity.Warning,
+					severity: DiagnosticSeverity.Error,
 					range: {
 						start: { line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0 },
 						end: { line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0 }
@@ -273,7 +278,22 @@ function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 			}
 		});
 	}
-	connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
+	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
+}
+
+function checkImports(filePath: string, diagnostics: Diagnostic[]) {
+	const importNames = symbolTables.getPT(filePath)?.children['UIdentifier'];
+	importNames?.forEach(importToken => {
+		if(!fs.existsSync(findPath((importToken as IToken).image, filePath))) {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Error,
+				range: ITokentoVSRange(importToken as IToken),
+				message: `Import error. Can't find module: ` + (importToken as IToken).image,
+				source: 'lama-lsp'
+			};
+			diagnostics.push(diagnostic);
+		} 
+	});
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -418,10 +438,10 @@ connection.onHover(params => {
 				if (funArgs) {
 					return {
 						contents: `fun ${token?.image} (${funArgs})`,
-						range: {
+						/* range: {
 							start: getStartPosition(token),
 							end: getEndPosition(token)
-						}
+						} */
 					};
 				}
 			}
@@ -440,6 +460,24 @@ function getHoveredInfo(document: any, offset: any) {
 
 }
 
+/* connection.onRenameRequest(params => {
+	const uri = params.textDocument.uri;
+	const document = documents.get(uri);
+	if (document !== undefined) {
+		const pos = params.position;
+		const offset = document.offsetAt(pos);
+		const filePath = ensurePath(uri);
+		const initNode = symbolTables.getPT(filePath);
+		const token = computeToken(initNode, offset);
+		if (token && token.scope) {
+			const defScope = findScopeInFile(token);
+			if (defScope) {
+				return defScope.getReferences(token.image);
+			}
+		}
+	}
+	return undefined;
+}); */
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);

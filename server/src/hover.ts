@@ -32,15 +32,19 @@ export class HoverVisitor extends ReferenceVisitor {
 		this.validateVisitor();
 	}
 
-	protected registerFArgs(ftoken: any, fargnode: CstNode) {
+	protected registerFArgs(ftoken: any, fargnode: CstNode, isPublic: boolean) {
 		let fargs: IToken[] = [];
 		collectTokensFromSubtree(fargnode, fargs);
-		ftoken.scope.addFArgs(ftoken.image, fargs.map(token => token.image));
+		if(isPublic) {
+			ftoken.scope.parent.addFArgs(ftoken.image, fargs.map(token => token.image));
+		} else {
+			ftoken.scope.addFArgs(ftoken.image, fargs.map(token => token.image));
+		}
 	}
 
 	functionDefinition(ctx: FunctionDefinitionCstChildren) { 
 		super.functionDefinition(ctx);
-		this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0]);
+		this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public != undefined);
 	}
 
 }

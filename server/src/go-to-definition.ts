@@ -6,6 +6,7 @@ import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
 import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
+import { Range, Position } from 'vscode-languageserver';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
     if (input === undefined) {
@@ -109,6 +110,21 @@ export function findRecoveredNode(node: CstNode | IToken): CstNode[] {
     return foundNodes;
 }
 
+export function CSTtoVSRange(node: CstNode): Range {
+    return {
+        start: { line: node.location?.startLine ? node.location.startLine - 1 : 0, character: node.location?.startColumn ? node.location.startColumn - 1 : 0 },
+        end: { line: node.location?.endLine ? node.location.endLine - 1 : 0, character: node.location?.endColumn ?? 0 }
+    }
+}
+
+export function ITokentoVSRange(token: IToken): Range {
+    return {
+        start: { line: token.startLine? token.startLine - 1 : 0, character: token.startColumn? token.startColumn - 1 : 0 },
+        end: { line: token.endLine? token.endLine - 1 : 0, character: token.endColumn? token.endColumn : 0 }
+    }
+}
+
+
 function hasRecoveredChildren(node: CstNode): boolean {
     for (const key in node.children) {
         const childNodes = node.children[key].filter(isCstNode);
@@ -143,6 +159,10 @@ export function addImportedBy(symbolTables: SymbolTables, path: string): void {
 
 function isCstNode(node: CstNode | IToken): node is CstNode {
     return 'children' in node;
+}
+
+function isIToken(token: CstNode | IToken): token is IToken {
+    return 'image' in token;
 }
 
 function inside(offset: number, range: any/* CstNodeLocation | IToken */): Boolean {
