@@ -1,7 +1,15 @@
 import { IToken, CstNode } from 'chevrotain';
 import { LamaParser } from './parser';
-import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren, DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, AsPatternCstChildren, CaseBranchPrefixCstChildren,/* , CaseBranchCstChildren */
-CurlyScopeExpressionCstChildren} from './lama_cst';
+import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, 
+  FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, 
+  VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, 
+  BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, 
+  ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren, 
+  DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, 
+  SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, 
+  PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, 
+  AsPatternCstChildren, CaseBranchPrefixCstChildren,/* , CaseBranchCstChildren */
+  CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode} from './lama_cst';
 import { DefaultScope as Scope } from './Scope';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 import { Range, Position } from 'vscode-languageserver';
@@ -18,6 +26,26 @@ export function getEndPosition (token: any /* IToken */): Position {
     token.endLine? token.endLine - 1 : 0,
     token.endColumn? token.endColumn - 1 : 0
   )
+}
+
+function isCstNode(node: CstNode | IToken): node is CstNode {
+	return 'children' in node;
+}
+
+function collectTokensFromSubtree(node: CstNode, tokens: IToken[]): void {
+	for (const childKey in node.children) {
+		if (node.children[childKey] instanceof Array) {
+			for (const child of node.children[childKey]) {
+				if (isCstNode(child)) {
+					// If the child is another CST node, recurse into it
+					collectTokensFromSubtree(child, tokens);
+				} else if (child.image != ","){
+					// If the child is a token, add it to the list
+					tokens.push(child);
+				}
+			}
+		}
+	}
 }
 
 const parser = new LamaParser()
@@ -59,6 +87,30 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     }
   }
 
+  protected registerFArgs(ftoken: any, fargnode: CstNode, isPublic: boolean) {
+		let fargs: IToken[] = [];
+		collectTokensFromSubtree(fargnode, fargs);
+		if(isPublic) {
+			ftoken.scope.parent.addFArgs(ftoken.image, fargs.map(token => token.image));
+		} else {
+			ftoken.scope.addFArgs(ftoken.image, fargs.map(token => token.image));
+		}
+	}
+
+  protected regArgs(token: any, n: number) {
+    token.nArgs = n;
+  }
+
+  protected countArgs(primary: PrimaryCstNode[], postfix: PostfixCstNode[] | undefined) {
+    const prim = primary[0];
+    const post = postfix ? postfix[0] : undefined;
+    const funId = prim.children.LIdentifier;
+    const funCall = post?.children.postfixCall;
+    if(funId && funCall) {
+      this.regArgs(funId[0], funCall[0].children.expression?.length ?? 0)
+    }
+  }
+
   compilationUnit(ctx: CompilationUnitCstChildren, scope: Scope) {
     this.visit(ctx.scopeExpression, scope/* new Scope(scope) */)
   } 
@@ -96,6 +148,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
 	}
 	
     this.registerScope(ctx.LIdentifier, scope)
+    this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public != undefined);
     const fScope = new Scope(scope)
     this.visit(ctx.functionArguments, fScope)
     this.visit(ctx.functionBody, fScope)
@@ -176,6 +229,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   postfixExpression(ctx: PostfixExpressionCstChildren, scope: Scope) {
     this.visit(ctx.primary, scope)
     this.visit(ctx.postfix, scope)
+    this.countArgs(ctx.primary, ctx.postfix)
   }
 
   primary(ctx: PrimaryCstChildren, scope: Scope){ // TODO: Apply     

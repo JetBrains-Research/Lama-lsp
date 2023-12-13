@@ -1,12 +1,12 @@
 import { SymbolTable, SymbolTables } from './SymbolTable'
 import { DefaultScope as Scope } from './Scope';
-import { CstNode, IToken } from 'chevrotain';
+import { CstNode, ILexingResult, IToken } from 'chevrotain';
 import { LamaParser } from './parser';
 import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
 import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
-import { Range, Position } from 'vscode-languageserver';
+import { Range, Position, MarkupContent } from 'vscode-languageserver';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
     if (input === undefined) {
@@ -24,12 +24,13 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
         let symbolTable = new SymbolTable(publicScope);
         symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
 
-/*         const refVisitor = new ReferenceVisitor('file://' + filePath);
-        refVisitor.visit(initNode); */
+        const refVisitor = new ReferenceVisitor('file://' + filePath);
+        refVisitor.visit(initNode);
 
-        const hoverVisitor = new HoverVisitor('file://' + filePath);
-        hoverVisitor.visit(initNode);    
+/*         const hoverVisitor = new HoverVisitor('file://' + filePath);
+        hoverVisitor.visit(initNode); */    
 
+        symbolTables.updateLexResult(filePath, parser.lexingResult)
         symbolTables.updatePT(filePath, initNode);
         symbolTables.updateST(filePath, symbolTable);
         addImportedBy(symbolTables, filePath)
@@ -71,6 +72,14 @@ export function findScopeInFile(token: any): Scope | undefined {
     return scope;
 }
 
+export function findPublicScope(token: any): Scope {
+    let scope = token.scope;
+    while (scope.parent !== undefined) {
+        scope = scope.parent;
+    }
+    return scope;
+}
+
 export function computeToken(node: any /* CstNode */, offset: number): any /* IToken | undefined */ {
     for (const key in node.children) {
         const element = node.children[key];
@@ -86,6 +95,27 @@ export function computeToken(node: any /* CstNode */, offset: number): any /* IT
         }
     }
     return undefined;
+}
+
+export function getHoveredInfo(lexResult: IToken[] | undefined, line: number): string {
+	let hoveredInfo: string = '';
+    if(lexResult && lexResult.length > 0) {
+		let max = lexResult?.length - 1;
+		let min = 0;
+		while(max - min > 0) {
+			let cur = Math.floor((max + min) / 2);
+			if (lexResult[cur].endLine! < line) {
+                min = cur + 1;
+            }
+            else {
+                max = cur;
+            }
+		}
+        if(lexResult[max].endLine == line) {
+            return lexResult[max].image.slice(2,-3);
+        }
+	}
+	return hoveredInfo;
 }
 
 export function findRecoveredNode(node: CstNode | IToken): CstNode[] {
@@ -155,6 +185,33 @@ export function addImportedBy(symbolTables: SymbolTables, path: string): void {
             symbolTables.importedBy[modulePath] = new Set([path]);
         }
     }
+}
+
+export function parseInterfaceFile(path: string): Set<string> {
+    const input = readFile(path);
+    const regex = /[,;]([^,;]+)[,;]/g;
+    const identifiers: Set<string> = new Set();
+    if(input) {
+        const lines = input.trim().split('\n');
+
+        lines.forEach((line) => {
+            let match;
+            while ((match = regex.exec(line)) !== null) {
+            if (match[1]) {
+                let id = match[1].trim();
+                if(id.startsWith('"') && id.endsWith('"')) {
+                    identifiers.add(id.slice(1, -1));
+                } else {
+                    identifiers.add(id);
+                }
+            }
+            }
+        });
+        // console.log(identifiers);
+    } else {
+        console.log("problem with reading path: " + path);
+    }
+    return identifiers;
 }
 
 function isCstNode(node: CstNode | IToken): node is CstNode {

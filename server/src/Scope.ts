@@ -1,5 +1,9 @@
-import { Location } from 'vscode-languageserver'
+import { Location, Range } from 'vscode-languageserver'
 import { IToken } from 'chevrotain'
+
+type ArgError = [Range, number, number];
+
+type ArgResolve = [string, Range, number];
 
 export class AbstractScope<T> {
 	private readonly definitions: {
@@ -11,15 +15,21 @@ export class AbstractScope<T> {
 	}
 
 	private readonly fArgs: {
-		[identifier: string]: string
+		[identifier: string]: string[]
 	}
   
 	public parent: AbstractScope<T> | undefined
+
+	private readonly argErrors: ArgError[]
+
+	private readonly argResolves: ArgResolve[]
   
 	constructor (parent?: AbstractScope<T>) {
 	  this.definitions = parent === undefined ? {} : Object.create(parent)
 	  this.referencesDict = {}
 	  this.fArgs = {}
+	  this.argErrors = []
+	  this.argResolves = []
 	  this.parent = parent
 	}
   
@@ -53,11 +63,27 @@ export class AbstractScope<T> {
 	}
 
 	public addFArgs (identifier: string, names: string[]): void {
-		this.fArgs[identifier] = names.join(', ');
+		this.fArgs[identifier] = names;
 	}
 
-	public getFArgs (identifier: string): string {
-		return this.fArgs[identifier];
+	public getFArgs (identifier: string): string | undefined {
+		return this.fArgs[identifier]?.join(', ');
+	}
+
+	public addArgError(range: Range, nArgs: number, expectedNArgs: number): void {
+		this.argErrors.push([range, nArgs, expectedNArgs]);
+	}
+
+	public getArgErrors(): ArgError[] {
+		return this.argErrors;
+	}
+
+	public addArgResolve(name: string, range: Range, nArgs: number): void {
+		this.argResolves.push([name, range, nArgs]);
+	}
+
+	public getArgResolves(): ArgResolve[] {
+		return this.argResolves;
 	}
   }
 

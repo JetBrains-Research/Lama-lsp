@@ -49,6 +49,7 @@ export function findLamaFiles(calledPath: string = STD_LIB_PATH): string[] {
 
             if (stat.isFile() && file.endsWith('.lama')) {
                 lamaFiles.push(filePath);
+                // console.log(filePath);
             } else if (stat.isDirectory()) {
                 scanDirectory(filePath);
             }
@@ -58,6 +59,11 @@ export function findLamaFiles(calledPath: string = STD_LIB_PATH): string[] {
     scanDirectory(calledPath);
 
     return lamaFiles;
+}
+
+export function findInterfaceFiles():string[] {
+    return [STD_LIB_PATH + "/Std.i"]
+    return ["/home/artem/WorkProjects/test/stdlib/Std.i"]
 }
 
 const STD_LIB_PATH = pathFunctions.dirname(pathFunctions.dirname(process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "")) + "/share/Lama";

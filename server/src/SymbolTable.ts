@@ -1,5 +1,6 @@
-import { CstNode } from 'chevrotain'
+import { CstNode, ILexingResult } from 'chevrotain'
 import { DefaultScope as Scope} from './Scope';
+import { IToken } from 'chevrotain';
 
 export class SymbolTable {
   public imports: string[];
@@ -25,10 +26,15 @@ export class SymbolTables {
     [uri: string]: Set<string>
   }
 
+  private readonly lexResult: {
+    [uri: string]: ILexingResult;
+  }
+
   constructor () {
     this.symbolTables = {}
     this.parseTrees = {}
     this.importedBy = {}
+    this.lexResult = {}
   }
 
   public updateST (uri: string, symbolTable: SymbolTable): void {
@@ -51,6 +57,14 @@ export class SymbolTables {
     if(this.symbolTables[uri]) {
       delete(this.symbolTables[uri]);
     }
+  }
+
+  public updateLexResult (uri: string, lexString: ILexingResult | undefined): void {
+    if(lexString) this.lexResult[uri] = lexString;
+  }
+
+  public getLexResult (uri: string): ILexingResult | undefined {
+    return this.lexResult[uri];
   }
   
 }

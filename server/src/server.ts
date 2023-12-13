@@ -21,9 +21,9 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange } from './go-to-definition';
-import { ensurePath, findLamaFiles, findPath } from './path-utils';
-import { LocationLink, Location, TextEdit, Range, Position } from 'vscode-languageserver';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile } from './go-to-definition';
+import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
+import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
 import {getStartPosition, getEndPosition} from './def_visitor'
@@ -43,6 +43,7 @@ let hasDiagnosticRelatedInformationCapability = false;
 
 const symbolTables = new SymbolTables();
 const LAMA_DEFAULTS: Set<string> = new Set(['+', '-', '*', '/', ':=', ':', '!!', '&&', '==', '!=', '<=', '<', '>=', '>', '%']);
+const LAMA_STD: Set<string> = new Set();
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -72,7 +73,7 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			referencesProvider: true,
 			documentHighlightProvider: true,
-			documentFormattingProvider: true,
+			documentFormattingProvider: false,
 			hoverProvider: true,
 			/* renameProvider: true */
 		}
@@ -97,6 +98,8 @@ connection.onInitialized(() => {
 			connection.console.log('Workspace folder change event received.');
 		});
 	}
+	findInterfaceFiles().forEach((filePath) => { parseInterfaceFile(filePath).forEach((definition) => LAMA_STD.add(definition)); });
+	// console.log(LAMA_STD);
 	findLamaFiles().forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
 	connection.workspace.getWorkspaceFolders().then((folders) => {
 		folders?.forEach((folder) => {
@@ -235,6 +238,7 @@ function validateFile(filePath: string, alsoImported?: boolean) {
 	checkDefinitions(filePath, diagnostics);
 	findParseErrors(filePath, diagnostics);
 	checkImports(filePath, diagnostics);
+	checkNumArgs(filePath, diagnostics);
 	connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
 	if (alsoImported) {
 		symbolTables.importedBy[filePath]?.forEach(modulePath => validateFile(modulePath, false));
@@ -244,7 +248,7 @@ function validateFile(filePath: string, alsoImported?: boolean) {
 function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 	const pScope = symbolTables.getST(filePath)?.publicScope;
 	pScope?.getRefNames().forEach((name) => {
-		if (!LAMA_DEFAULTS.has(name) && !findDefScope(name, filePath, symbolTables)) {
+		if (!LAMA_DEFAULTS.has(name) && !LAMA_STD.has(name) && !findDefScope(name, filePath, symbolTables)) {
 			pScope.getReferences(name)?.forEach(location => {
 				const diagnostic: Diagnostic = {
 					severity: DiagnosticSeverity.Error,
@@ -296,6 +300,33 @@ function checkImports(filePath: string, diagnostics: Diagnostic[]) {
 	});
 }
 
+function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
+	const pScope = symbolTables.getST(filePath)?.publicScope;
+	pScope?.getArgErrors().forEach((argError) => { 
+				const diagnostic: Diagnostic = {
+					severity: DiagnosticSeverity.Warning,
+					range: argError[0],
+					message: `Number of arguments: ` + argError[1] + `, but expected: ` + argError[2],
+					source: 'lama-lsp'
+				};
+				diagnostics.push(diagnostic);
+	})
+	pScope?.getArgResolves().forEach((argResolve) => {
+		const defScope = findDefScope(argResolve[0], filePath, symbolTables);
+		const defArgs = defScope?.getFArgs(argResolve[0])?.split(', ').length;
+		if(defScope && defArgs != argResolve[2]) {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Warning,
+				range: argResolve[1],
+				message: `Number of arguments: ` + argResolve[2] + `, but expected: ` + defArgs,
+				source: 'lama-lsp'
+			};
+			diagnostics.push(diagnostic);
+		}
+	})
+	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
+}
+
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
 	connection.console.log('We received an file change event');
@@ -342,7 +373,7 @@ connection.onDidChangeWatchedFiles(_change => {
 ); */
 
 connection.onDefinition((params) => {
-	/* console.log(symbolTables); */
+	// console.log(symbolTables);
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
 	if (document !== undefined) {
@@ -435,30 +466,33 @@ connection.onHover(params => {
 			const defScope = findDefScope(token.image, filePath, symbolTables, token.scope);
 			if (defScope) {
 				const funArgs = defScope.getFArgs(token.image);
-				if (funArgs) {
+				const definition = defScope.get(token.image);
+				if (definition && funArgs) {
+					const comment = getHoveredInfo(symbolTables.getLexResult(ensurePath(definition?.uri))?.groups['comments'], definition?.range.start.line ?? 0);
+					let markdown: MarkupContent = {
+						kind: MarkupKind.Markdown,
+						value: [
+							'```lama',
+							`fun ${token?.image} (${funArgs})`,
+							'```',
+							comment
+						].join('\n')
+					};
 					return {
-						contents: `fun ${token?.image} (${funArgs})`,
-						/* range: {
-							start: getStartPosition(token),
-							end: getEndPosition(token)
-						} */
+						contents: markdown
+						// contents: `fun ${token?.image} (${funArgs}) \n${hoveredInfo.slice(2)}`,
 					};
 				}
 			}
 		}
-		/* const hoveredInfo = getHoveredInfo(document, offset); */
-		if (token?.image) {
+		/* if (token?.image) {
             return {
                 contents: `Hovered: ${token?.image}` ,
             };
-        }
+        } */
 	}
 	return undefined;
 });
-
-function getHoveredInfo(document: any, offset: any) {
-
-}
 
 /* connection.onRenameRequest(params => {
 	const uri = params.textDocument.uri;

@@ -2,7 +2,7 @@ import { Location, Position, Range } from 'vscode-languageserver';
 import { LamaParser } from './parser';
 import { AsPatternCstChildren, BasicExpressionCstChildren, FunctionDefinitionCstChildren, InfixDefinitionCstChildren, PostfixCstChildren, PrimaryCstChildren, SyntaxPrimaryCstChildren, VariableDefinitionItemCstChildren } from './lama_cst';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
-import { findScopeInFile } from './go-to-definition';
+import { findPublicScope, findScopeInFile } from './go-to-definition';
 
 const parser = new LamaParser()
 const LamaVisitorWithDefaults = parser.getBaseCstVisitorConstructorWithDefaults()
@@ -44,6 +44,32 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 			}
 		}
 	}
+	
+	protected checkArgErrors(tokens: any[] | undefined) {
+		if(tokens) {
+			for(let i = 0; i < tokens.length; i++) {
+				const token = tokens[i];
+				const range = Range.create(
+					Position.create(token.startLine - 1, token.startColumn - 1),
+					Position.create(token.endLine - 1, token.endColumn)
+				);
+				const scope = findScopeInFile(token);
+				if(scope) {
+					let pScope = findPublicScope(token);
+					if(token.nArgs) {
+						if(scope?.has(token.image)) {
+							const def_nArgs = scope?.getFArgs(token.image)?.split(', ').length;
+							if(def_nArgs && token.nArgs !== def_nArgs) {
+								pScope?.addArgError(range, token.nArgs, def_nArgs);
+							}
+						} else {
+								scope?.addArgResolve(token.image, range, token.nArgs);
+						}
+					} 
+				}
+			}
+		}
+	}
 
 	functionDefinition(ctx: FunctionDefinitionCstChildren) { 
 		this.registerReference(ctx.LIdentifier);
@@ -69,6 +95,7 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 
 	primary(ctx: PrimaryCstChildren){   
 		this.registerReference(ctx.LIdentifier);
+		this.checkArgErrors(ctx.LIdentifier);
 		this.registerReference(ctx.Operator);
 		this.visit(ctx.functionArguments);
 		this.visit(ctx.functionBody);
