@@ -23,7 +23,7 @@ import {
 
 import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile } from './go-to-definition';
 import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
-import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind } from 'vscode-languageserver';
+import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
 import {getStartPosition, getEndPosition} from './def_visitor'
@@ -75,7 +75,7 @@ connection.onInitialize((params: InitializeParams) => {
 			documentHighlightProvider: true,
 			documentFormattingProvider: false,
 			hoverProvider: true,
-			/* renameProvider: true */
+			renameProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -313,7 +313,7 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 	})
 	pScope?.getArgResolves().forEach((argResolve) => {
 		const defScope = findDefScope(argResolve[0], filePath, symbolTables);
-		const defArgs = defScope?.getFArgs(argResolve[0])?.split(', ').length;
+		const defArgs = defScope?.getNArgs(argResolve[0]);
 		if(defScope && defArgs != argResolve[2]) {
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Warning,
@@ -494,7 +494,7 @@ connection.onHover(params => {
 	return undefined;
 });
 
-/* connection.onRenameRequest(params => {
+connection.onRenameRequest(params => {
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
 	if (document !== undefined) {
@@ -503,15 +503,34 @@ connection.onHover(params => {
 		const filePath = ensurePath(uri);
 		const initNode = symbolTables.getPT(filePath);
 		const token = computeToken(initNode, offset);
+		const fileSymbolTable = symbolTables.getST(filePath);
 		if (token && token.scope) {
 			const defScope = findScopeInFile(token);
 			if (defScope) {
-				return defScope.getReferences(token.image);
+				let references: Location[] = defScope.getReferences(token.image) || [];
+				if (defScope === fileSymbolTable?.publicScope) {
+					for (const modulePath of symbolTables.importedBy[filePath] || []) {
+						if (findDefScope(token.image, modulePath, symbolTables) === defScope) {
+							references = references.concat(symbolTables.getST(modulePath)?.publicScope.getReferences(token.image) || []);
+						}
+					}
+				}
+				let edit: WorkspaceEdit = {};
+				let changes: { [uri: DocumentUri]: TextEdit[] } = {};
+				references.forEach(location => {
+					const tEdit: TextEdit = {range: location.range, newText: params.newName};
+					if(!changes[location.uri]) {
+						changes[location.uri] = [];
+					}
+					changes[location.uri].push(tEdit);
+				});
+				edit.changes = changes;
+				return edit;
 			}
 		}
 	}
 	return undefined;
-}); */
+});
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
