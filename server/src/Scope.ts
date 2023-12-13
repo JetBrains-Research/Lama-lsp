@@ -15,7 +15,11 @@ export class AbstractScope<T> {
 	}
 
 	private readonly fArgs: {
-		[identifier: string]: string[]
+		[identifier: string]: string
+	}
+
+	private readonly NArgs: {
+		[identifier: string]: number
 	}
   
 	public parent: AbstractScope<T> | undefined
@@ -31,6 +35,7 @@ export class AbstractScope<T> {
 	  this.argErrors = []
 	  this.argResolves = []
 	  this.parent = parent
+	  this.NArgs = {}
 	}
   
 	public get (identifier: string): T | undefined {
@@ -62,12 +67,20 @@ export class AbstractScope<T> {
 	  return Object.keys(this.referencesDict)
 	}
 
-	public addFArgs (identifier: string, names: string[]): void {
+	public addFArgs (identifier: string, names: string): void {
 		this.fArgs[identifier] = names;
 	}
 
 	public getFArgs (identifier: string): string | undefined {
-		return this.fArgs[identifier]?.join(', ');
+		return this.fArgs[identifier];
+	}
+
+	public addNArgs (identifier: string, n: number): void {
+		this.NArgs[identifier] = n;
+	}
+
+	public getNArgs (identifier: string): number | undefined {
+		return this.NArgs[identifier];
 	}
 
 	public addArgError(range: Range, nArgs: number, expectedNArgs: number): void {

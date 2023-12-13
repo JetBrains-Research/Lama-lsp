@@ -9,10 +9,11 @@ import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChil
   SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, 
   PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, 
   AsPatternCstChildren, CaseBranchPrefixCstChildren,/* , CaseBranchCstChildren */
-  CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode} from './lama_cst';
+  CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode, FunctionArgumentsCstNode} from './lama_cst';
 import { DefaultScope as Scope } from './Scope';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 import { Range, Position } from 'vscode-languageserver';
+import { ensurePath, readFile } from './path-utils';
 
 export function getStartPosition (token: any /* IToken */): Position {
   return Position.create(
@@ -56,7 +57,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   constructor(
     public documentUri: DocumentUri,
 	  public public_scope: Scope,
-	  public private_scope: Scope
+	  public private_scope: Scope,
+    private filecontent = readFile(ensurePath(documentUri))
   ) {
     super()
     this.validateVisitor()
@@ -87,14 +89,20 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     }
   }
 
-  protected registerFArgs(ftoken: any, fargnode: CstNode, isPublic: boolean) {
-		let fargs: IToken[] = [];
-		collectTokensFromSubtree(fargnode, fargs);
-		if(isPublic) {
-			ftoken.scope.parent.addFArgs(ftoken.image, fargs.map(token => token.image));
-		} else {
-			ftoken.scope.addFArgs(ftoken.image, fargs.map(token => token.image));
-		}
+  protected registerFArgs(ftoken: any, fargnode: FunctionArgumentsCstNode, isPublic: boolean) {
+		// let fargs: IToken[] = [];
+		// collectTokensFromSubtree(fargnode, fargs);
+    if(fargnode.location && fargnode.location.endOffset) {
+      const fargs = this.filecontent?.substring(fargnode.location?.startOffset, fargnode.location?.endOffset + 1);
+      if(isPublic) {
+        ftoken.scope.parent.addFArgs(ftoken.image, fargs);
+        // ftoken.scope.parent.addFArgs(ftoken.image, fargs.map(token => token.image));
+        ftoken.scope.parent.addNArgs(ftoken.image, fargnode.children.pattern?.length);
+      } else {
+        ftoken.scope.addFArgs(ftoken.image, fargs);
+        ftoken.scope.addNArgs(ftoken.image, fargnode.children.pattern?.length);
+      }
+    }
 	}
 
   protected regArgs(token: any, n: number) {
@@ -149,6 +157,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
 	
     this.registerScope(ctx.LIdentifier, scope)
     this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public != undefined);
+    // ctx.functionArguments[0].children.pattern[0].location
     const fScope = new Scope(scope)
     this.visit(ctx.functionArguments, fScope)
     this.visit(ctx.functionBody, fScope)

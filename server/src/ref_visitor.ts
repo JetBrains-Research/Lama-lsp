@@ -58,7 +58,8 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 					let pScope = findPublicScope(token);
 					if(token.nArgs) {
 						if(scope?.has(token.image)) {
-							const def_nArgs = scope?.getFArgs(token.image)?.split(', ').length;
+							const def_nArgs = scope?.getNArgs(token.image);
+							// const def_nArgs = scope?.getFArgs(token.image)?.split(', ').length;
 							if(def_nArgs && token.nArgs !== def_nArgs) {
 								pScope?.addArgError(range, token.nArgs, def_nArgs);
 							}
