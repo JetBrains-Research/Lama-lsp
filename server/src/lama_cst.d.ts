@@ -519,6 +519,8 @@ export type AsPatternCstChildren = {
   LIdentifier: IToken[];
   AtSign?: IToken[];
   pattern?: PatternCstNode[];
+  AtHash?: IToken[];
+  Shape?: IToken[];
 };
 
 export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {

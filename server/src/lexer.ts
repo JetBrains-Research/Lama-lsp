@@ -10,6 +10,7 @@ const Operator = createToken({ name: 'Operator', pattern: /[+*/%$#@!|&^~?<>:=-]+
 
 const Arrow = createToken({ name: 'Arrow', label: '->', pattern: /->/, longer_alt: Operator, categories: [Operator] })
 const AtSign = createToken({ name: 'AtSign', label: '@', pattern: /@/, longer_alt: Operator, categories: [Operator] })
+const AtHash = createToken({ name: 'AtHash', label: '@#', pattern: /@#/, longer_alt: Operator, categories: [Operator] })
 const Bar = createToken({ name: 'Bar', label: '|', pattern: /\|/, longer_alt: Operator, categories: [Operator] })
 const Colon = createToken({ name: 'Colon', label: ':', pattern: /:/, longer_alt: Operator, categories: [Operator] })
 const Dollar = createToken({ name: 'Dollar', label: '$', pattern: /\$/, longer_alt: Operator, categories: [Operator] })
@@ -181,6 +182,7 @@ export const vocabulary = [
   Underscore,
   // Operators
   Arrow,
+  AtHash,
   AtSign,
   Bar,
   Colon,
@@ -274,6 +276,7 @@ export default {
   Underscore,
   // Operators
   Arrow,
+  AtHash,
   AtSign,
   Bar,
   Colon,

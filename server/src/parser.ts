@@ -767,8 +767,16 @@ export class LamaParser extends CstParser {
   private readonly asPattern = this.RULE('asPattern', () => {
     this.CONSUME(Tokens.LIdentifier)
     this.OPTION(() => {
-      this.CONSUME(Tokens.AtSign)
-      this.SUBRULE(this.pattern)
+      this.OR([
+        {ALT: () => {
+          this.CONSUME(Tokens.AtSign)
+          this.SUBRULE(this.pattern)
+        }},
+        {ALT: () => {
+          this.CONSUME(Tokens.AtHash)
+          this.CONSUME(Tokens.Shape)
+        }}
+      ])
     })
   })
 }
