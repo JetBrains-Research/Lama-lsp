@@ -19,7 +19,7 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
 
         let publicScope = new Scope();
         let privateScope = new Scope(publicScope);
-        const defVisitor = new DefinitionVisitor('file://' + filePath, publicScope, privateScope);
+        const defVisitor = new DefinitionVisitor('file://' + filePath, publicScope, privateScope, input);
         defVisitor.visit(initNode, privateScope);
         let symbolTable = new SymbolTable(publicScope);
         symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);

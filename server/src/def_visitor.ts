@@ -58,11 +58,13 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     public documentUri: DocumentUri,
 	  public public_scope: Scope,
 	  public private_scope: Scope,
-    private filecontent = readFile(ensurePath(documentUri))
+    private filecontent: string
   ) {
     super()
     this.validateVisitor()
   }
+
+  // filecontent = readFile(ensurePath(this.documentUri));
 
   visit(node: any, param?: any) {
     if(node === undefined) {
