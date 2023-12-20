@@ -57,7 +57,7 @@ export function activate(context: ExtensionContext) {
 
 	exec('eval $(opam env); which lamac', (error, stdout, stderr) => {
 		if (error) {
-			console.error('Error while running "which lamac":', error.message);
+			client.error('Error while running "which lamac":', error.message);
 			return;
 		}
 	
@@ -76,7 +76,7 @@ export function activate(context: ExtensionContext) {
 		client.sendNotification('fileRename', inf.files[0]);
 	});
 	
-	client.onRequest('log_info', node => console.log(node));
+	// client.onRequest('log_info', node => console.log(node));
 
 }
 
