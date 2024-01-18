@@ -92,18 +92,16 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   }
 
   protected registerFArgs(ftoken: any, fargnode: FunctionArgumentsCstNode, isPublic: boolean) {
-		// let fargs: IToken[] = [];
-		// collectTokensFromSubtree(fargnode, fargs);
+    let fargs = "";
     if(fargnode.location && fargnode.location.endOffset) {
-      const fargs = this.filecontent?.substring(fargnode.location?.startOffset, fargnode.location?.endOffset + 1);
-      if(isPublic) {
-        ftoken.scope.parent.addFArgs(ftoken.image, fargs);
-        // ftoken.scope.parent.addFArgs(ftoken.image, fargs.map(token => token.image));
-        ftoken.scope.parent.addNArgs(ftoken.image, fargnode.children.pattern?.length);
-      } else {
-        ftoken.scope.addFArgs(ftoken.image, fargs);
-        ftoken.scope.addNArgs(ftoken.image, fargnode.children.pattern?.length);
-      }
+      fargs = this.filecontent?.substring(fargnode.location?.startOffset, fargnode.location?.endOffset + 1);
+    }
+    if(isPublic) {
+      this.public_scope.addFArgs(ftoken.image, fargs);
+      this.public_scope.addNArgs(ftoken.image, fargnode.children.pattern?.length ?? 0);
+    } else {
+      ftoken.scope.addFArgs(ftoken.image, fargs);
+      ftoken.scope.addNArgs(ftoken.image, fargnode.children.pattern?.length ?? 0);
     }
 	}
 
@@ -117,7 +115,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     const funId = prim.children.LIdentifier;
     const funCall = post?.children.postfixCall;
     if(funId && funCall) {
-      this.regArgs(funId[0], funCall[0].children.expression?.length ?? 0)
+      this.regArgs(funId[0], funCall[0].children.expression?.length ?? 0);
     }
   }
 
@@ -158,7 +156,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
 	}
 	
     this.registerScope(ctx.LIdentifier, scope)
-    this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public != undefined);
+    this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public !== undefined);
     // ctx.functionArguments[0].children.pattern[0].location
     const fScope = new Scope(scope)
     this.visit(ctx.functionArguments, fScope)

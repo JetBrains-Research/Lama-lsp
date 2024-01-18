@@ -56,15 +56,14 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 				const scope = findScopeInFile(token);
 				if(scope) {
 					let pScope = findPublicScope(token);
-					if(token.nArgs) {
-						if(scope?.has(token.image)) {
-							const def_nArgs = scope?.getNArgs(token.image);
-							// const def_nArgs = scope?.getFArgs(token.image)?.split(', ').length;
-							if(def_nArgs && token.nArgs !== def_nArgs) {
-								pScope?.addArgError(range, token.nArgs, def_nArgs);
+					if(token.nArgs !== undefined) {
+						if(scope.has(token.image)) {
+							const def_nArgs = scope.getNArgs(token.image);
+							if(def_nArgs !== undefined && token.nArgs !== def_nArgs) {
+								pScope.addArgError(range, token.nArgs, def_nArgs);
 							}
 						} else {
-								scope?.addArgResolve(token.image, range, token.nArgs);
+								scope.addArgResolve(token.image, range, token.nArgs);
 						}
 					} 
 				}
