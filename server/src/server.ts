@@ -21,7 +21,7 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile } from './go-to-definition';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary } from './go-to-definition';
 import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
 import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
@@ -43,7 +43,8 @@ let hasDiagnosticRelatedInformationCapability = false;
 
 const symbolTables = new SymbolTables();
 const LAMA_DEFAULTS: Set<string> = new Set(['+', '-', '*', '/', ':=', ':', '!!', '&&', '==', '!=', '<=', '<', '>=', '>', '%']);
-const LAMA_STD: Set<string> = new Set();
+let LAMA_STD: Set<string>;
+let LAMA_STD_DICT: LocationDictionary = {};
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -98,7 +99,8 @@ connection.onInitialized(() => {
 			connection.console.log('Workspace folder change event received.');
 		});
 	}
-	findInterfaceFiles().forEach((filePath) => { parseInterfaceFile(filePath).forEach((definition) => LAMA_STD.add(definition)); });
+	findInterfaceFiles().forEach((filePath) => { LAMA_STD_DICT = parseInterfaceFile(filePath); });
+	LAMA_STD = new Set(Object.keys(LAMA_STD_DICT));
 	// console.log(LAMA_STD);
 	findLamaFiles().forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
 	connection.workspace.getWorkspaceFolders().then((folders) => {
@@ -392,6 +394,8 @@ connection.onDefinition((params) => {
 					const location = Location.create(definition.uri, definition.range); //TODO LocationLink[] - ??
 					return location;
 				}
+			} else if (LAMA_STD.has(token.image)) {
+				return LAMA_STD_DICT[token.image];
 			}
 		}
 	}
@@ -469,7 +473,7 @@ connection.onHover(params => {
 			if (defScope) {
 				const funArgs = defScope.getFArgs(token.image);
 				const definition = defScope.get(token.image);
-				if (definition && funArgs) {
+				if (definition && funArgs !== undefined) {
 					const comment = getHoveredInfo(symbolTables.getLexResult(ensurePath(definition?.uri))?.groups['comments'], definition?.range.start.line ?? 0);
 					let markdown: MarkupContent = {
 						kind: MarkupKind.Markdown,

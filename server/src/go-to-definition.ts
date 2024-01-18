@@ -6,7 +6,7 @@ import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
 import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
-import { Range, Position, MarkupContent } from 'vscode-languageserver';
+import { Range, Position, MarkupContent, Location } from 'vscode-languageserver';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
     if (input === undefined) {
@@ -187,31 +187,46 @@ export function addImportedBy(symbolTables: SymbolTables, path: string): void {
     }
 }
 
-export function parseInterfaceFile(path: string): Set<string> {
+export type LocationDictionary = {
+    [key: string]: Location;
+};
+
+export function parseInterfaceFile(path: string): LocationDictionary {
     const input = readFile(path);
     const regex = /[,;]([^,;]+)[,;]/g;
     const identifiers: Set<string> = new Set();
+    let locations: LocationDictionary = {};
     if(input) {
+        let lineindex = 0;
         const lines = input.trim().split('\n');
 
         lines.forEach((line) => {
             let match;
             while ((match = regex.exec(line)) !== null) {
-            if (match[1]) {
-                let id = match[1].trim();
-                if(id.startsWith('"') && id.endsWith('"')) {
-                    identifiers.add(id.slice(1, -1));
-                } else {
-                    identifiers.add(id);
+                if (match[1]) {
+                    let id = match[1].trim();
+                    if(id.startsWith('"') && id.endsWith('"')) {
+                        identifiers.add(id.slice(1, -1));
+                        locations[id.slice(1, -1)] = Location.create("file://" + path, 
+                                        Range.create(
+                                            {line: lineindex, character: line.indexOf(id) + 1}, 
+                                            {line: lineindex, character: line.indexOf(id) + id.length - 1}));
+                    } else {
+                        identifiers.add(id);
+                        locations[id] = Location.create("file://" + path, 
+                                        Range.create(
+                                            {line: lineindex, character: line.indexOf(id)}, 
+                                            {line: lineindex, character: line.indexOf(id) + id.length}));
+                    }
                 }
             }
-            }
+            lineindex+=1;
         });
         // console.log(identifiers);
     } else {
         console.log("problem with reading path: " + path);
     }
-    return identifiers;
+    return locations;
 }
 
 function isCstNode(node: CstNode | IToken): node is CstNode {
