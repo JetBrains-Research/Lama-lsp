@@ -47,8 +47,8 @@ export function activate(context: ExtensionContext) {
 
 	// Create the language client and start the client.
 	client = new LanguageClient(
-		'testlspLama',
-		'Test LSP Lama',
+		'languageServerLama',
+		'Lama Language Server',
 		serverOptions,
 		clientOptions
 	);
