@@ -89,7 +89,7 @@ connection.onInitialize((params: InitializeParams) => {
 	return result;
 });
 
-connection.onInitialized(() => {
+connection.onInitialized(async () => {
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
@@ -103,16 +103,17 @@ connection.onInitialized(() => {
 	LAMA_STD = new Set(Object.keys(LAMA_STD_DICT));
 	// console.log(LAMA_STD);
 	findLamaFiles().forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
-	connection.workspace.getWorkspaceFolders().then((folders) => {
+	await connection.workspace.getWorkspaceFolders().then(async (folders) => {
 		folders?.forEach((folder) => {
 			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
 		});
 	});
-	connection.workspace.getWorkspaceFolders().then((folders) => {
+	await connection.workspace.getWorkspaceFolders().then(async (folders) => {
 		folders?.forEach((folder) => {
 			findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { validateFile(filePath, false); });
 		});
 	});
+	connection.window.showInformationMessage('Initialization done.');
 });
 
 // The example settings
