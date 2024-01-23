@@ -30,7 +30,11 @@
 				"extensions": [
 					".lama"
 				],
-				"configuration": "./languages/lama.language-configuration.json"
+				"configuration": "./languages/lama.language-configuration.json",
+				"icon": {
+					"dark": "./languages/lama-light.svg",
+					"light": "./languages/lama.svg"
+				}
 			}
 		],
 		"grammars": [
