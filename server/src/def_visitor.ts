@@ -25,7 +25,7 @@ export function getStartPosition (token: any /* IToken */): Position {
 export function getEndPosition (token: any /* IToken */): Position {
   return Position.create(
     token.endLine? token.endLine - 1 : 0,
-    token.endColumn? token.endColumn - 1 : 0
+    token.endColumn? token.endColumn : 0
   )
 }
 
@@ -194,6 +194,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
 	}
 
     this.registerScope(ctx.Operator, scope)
+    this.registerFArgs(ctx.Operator[0], ctx.functionArguments[0], ctx.Public !== undefined);
     const iScope = new Scope(scope)
     this.visit(ctx.functionArguments, iScope)
     this.visit(ctx.functionBody, iScope)

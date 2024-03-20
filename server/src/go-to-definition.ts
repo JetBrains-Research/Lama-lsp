@@ -37,6 +37,26 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
     }
 }
 
+export function setParseTree(symbolTables: SymbolTables, filePath: string, input?: string): void {
+    if (input === undefined) {
+        input = readFile(filePath) || undefined;
+    }
+    removeImportedBy(symbolTables, filePath);
+    if (input) {
+        const parser = new LamaParser();
+        const initNode = parser.parse(input);
+
+        let publicScope = new Scope();
+        let symbolTable = new SymbolTable(publicScope);
+        symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
+
+        symbolTables.updateLexResult(filePath, parser.lexingResult)
+        symbolTables.updatePT(filePath, initNode);
+        symbolTables.updateST(filePath, symbolTable);
+        addImportedBy(symbolTables, filePath)
+    }
+}
+
 export function findDefScope(name: string, path: string, symbolTables: SymbolTables, scope?: Scope): Scope | undefined {
     if (!scope) {
         scope = symbolTables.getST(path)?.publicScope;
@@ -112,32 +132,77 @@ export function getHoveredInfo(lexResult: IToken[] | undefined, line: number): s
             }
 		}
         if(lexResult[max].endLine == line) {
-            return lexResult[max].image.slice(2,-3);
+            if(lexResult[max].endLine == lexResult[max].startLine) {
+                return lexResult[max].image.slice(2,);
+            }
+            else {
+                return lexResult[max].image.slice(2,-3);
+            }
         }
 	}
 	return hoveredInfo;
 }
 
-export function findRecoveredNode(node: CstNode | IToken): CstNode[] {
-    const foundNodes: CstNode[] = [];
+export function findRecoveredNode(childNode: CstNode | IToken, parentNode?: CstNode | IToken): {n: CstNode, s: string}[] {
+    // const foundNodes: CstNode[] = [];
+    const foundNodes: {n: any/*CstNode*/, s: string}[] = [];
 
-    if (isCstNode(node) && node.recoveredNode) {
-        if (!hasRecoveredChildren(node)) {
-            foundNodes.push(node);
+    // if (isCstNode(node) && node.recoveredNode) {
+    //     if (!hasRecoveredChildren(node)) {
+    //         foundNodes.push(node);
+    //     }
+    // }
+
+    // if (isCstNode(node) && node.children) {
+    //     for (const key in node.children) {
+    //         const childNodes = node.children[key].filter(isCstNode);
+    //         for (const childNode of childNodes) {
+    //             const childResult = findRecoveredNode(childNode);
+    //             foundNodes.push(...childResult);
+    //         }
+    //     }
+    // }
+    if (isCstNode(childNode)) {
+        if (childNode.recoveredNode && childNode.location == undefined) {
+            // const breaker = findRecoveredChild(node);
+            foundNodes.push({n: parentNode, s: childNode.name});
         }
-    }
 
-    if (isCstNode(node) && node.children) {
-        for (const key in node.children) {
-            const childNodes = node.children[key].filter(isCstNode);
-            for (const childNode of childNodes) {
-                const childResult = findRecoveredNode(childNode);
-                foundNodes.push(...childResult);
+        else if(childNode.recoveredNode) {
+            foundNodes.push({n: childNode, s: childNode.name});
+        }
+    
+        else if (childNode.children) {
+            for (const key in childNode.children) {
+                // const childNodes = node.children[key].filter(isCstNode);
+                for (const node of childNode.children[key]) {
+                    const childResult = findRecoveredNode(node, childNode);
+                    foundNodes.push(...childResult);
+                }
             }
         }
     }
 
+    else if('isInsertedInRecovery' in childNode) {
+        foundNodes.push({n: parentNode, s: (childNode as any).tokenType.name});
+        // foundNodes.push({n: parentNode, s: childNode.image});
+    }
+
     return foundNodes;
+}
+
+function findRecoveredChild(node: CstNode): CstNode {
+    while(hasRecoveredChildren(node)) {
+        for(const key in node.children) {
+            for(const child of node.children[key].filter(isCstNode)) {
+                if(child.recoveredNode) {
+                    node = child;
+                    break;
+                }
+            }
+        }
+    }
+    return node;
 }
 
 export function CSTtoVSRange(node: CstNode): Range {

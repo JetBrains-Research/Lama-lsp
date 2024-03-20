@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, commands } from 'vscode';
+import { workspace, ExtensionContext, extensions, commands, window } from 'vscode';
 
 import {
 	LanguageClient,
@@ -17,6 +17,8 @@ import {exec} from 'child_process';
 import { ConnectionError } from 'vscode-languageserver';
 
 let client: LanguageClient;
+
+export type CExtensionAPI = any;
 
 
 export function activate(context: ExtensionContext) {
@@ -70,13 +72,18 @@ export function activate(context: ExtensionContext) {
 			// Handle the case when 'lamac' is not found
 		}
 		client.start();
-		});
-	
+	});
+
 	workspace.onDidRenameFiles(inf => {
 		client.sendNotification('fileRename', inf.files[0]);
 	});
+
+	client.onRequest('runtimeDefinition', async params => {
+		// window.showInformationMessage(params.textDocument.uri);
+		return commands.executeCommand("cpptools.execute.workspaceCommand", "textDocument/definition", params);
+	});
 	
-	// client.onRequest('log_info', node => console.log(node));
+	client.onRequest('log_info', node => console.log(node));
 
 }
 
@@ -85,4 +92,14 @@ export function deactivate(): Thenable<void> | undefined {
 		return undefined;
 	}
 	return client.stop();
+}
+
+export async function getCExtensionAPI(): Promise<CExtensionAPI> {
+	const vscodeC = extensions.getExtension('ms-vscode.cpptools');
+	if (!vscodeC) {
+	  return Promise.resolve(undefined);
+	}
+  
+	const api = await vscodeC.activate();
+	return Promise.resolve(api);
 }
