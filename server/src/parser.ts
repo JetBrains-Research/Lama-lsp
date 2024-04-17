@@ -1,4 +1,4 @@
-import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult, Rule} from 'chevrotain'
+import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult, Rule, EOF} from 'chevrotain'
 import Tokens, { vocabulary, lexer } from './lexer'
 
 const debug = process.env.NODE_ENV === 'development'
@@ -38,6 +38,7 @@ export class LamaParser extends CstParser {
       this.CONSUME(Tokens.Semicolon)
     })
     this.SUBRULE(this.scopeExpression)
+    // this.CONSUME(Tokens.EOF)
   }) 
 
   private readonly scopeExpression = this.RULE('scopeExpression', () => {

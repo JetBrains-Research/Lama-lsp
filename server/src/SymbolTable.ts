@@ -1,6 +1,5 @@
-import { CstNode, ILexingResult } from 'chevrotain'
+import { CstNode, ILexingResult, IRecognitionException } from 'chevrotain'
 import { DefaultScope as Scope} from './Scope';
-import { IToken } from 'chevrotain';
 
 export class SymbolTable {
   public imports: string[];
@@ -30,11 +29,16 @@ export class SymbolTables {
     [uri: string]: ILexingResult;
   }
 
+  private readonly parseErrors: {
+    [uri: string]: IRecognitionException[]; 
+  }
+
   constructor () {
     this.symbolTables = {}
     this.parseTrees = {}
     this.importedBy = {}
     this.lexResult = {}
+    this.parseErrors = {}
   }
 
   public updateST (uri: string, symbolTable: SymbolTable): void {
@@ -65,6 +69,14 @@ export class SymbolTables {
 
   public getLexResult (uri: string): ILexingResult | undefined {
     return this.lexResult[uri];
+  }
+
+  public updateParseErrors (uri: string, parseErrors: IRecognitionException[]): void {
+    this.parseErrors[uri] = parseErrors;
+  }
+
+  public getParseErrors (uri: string): IRecognitionException[] | undefined {
+    return this.parseErrors[uri];
   }
   
 }

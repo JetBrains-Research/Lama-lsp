@@ -31,6 +31,7 @@ import * as fs from 'fs';
 import { IToken } from 'chevrotain';
 import { basename } from 'path';
 import { connect } from 'http2';
+import { handleParseErrors } from './parse_errors';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -200,23 +201,29 @@ documents.onDidChangeContent(change => {
 
 	const filePath = ensurePath(change.document.uri);
 	setSymbolTable(symbolTables, filePath, change.document.getText());
-	// console.log(symbolTables.getPT(filePath));
-	// connection.sendRequest('log_info', symbolTables.getPT(filePath));
-	validateFile(filePath, true);
-	/* console.log(symbolTables); */
-});
-
-documents.onDidOpen(e => {
-	const filePath = ensurePath(e.document.uri);
-	setSymbolTable(symbolTables, filePath);
 	symbolTables.getST(filePath)?.imports?.forEach(importName => {
 		const importPath = findPath(importName, filePath);
 		if(fs.existsSync(importPath)) {
 			setSymbolTable(symbolTables, importPath);
 		}
 	});
+	// console.log(symbolTables.getPT(filePath));
+	// connection.sendRequest('log_info', symbolTables.getPT(filePath));
 	validateFile(filePath, true);
+	/* console.log(symbolTables); */
 });
+
+// documents.onDidOpen(e => {
+// 	const filePath = ensurePath(e.document.uri);
+// 	setSymbolTable(symbolTables, filePath);
+// 	symbolTables.getST(filePath)?.imports?.forEach(importName => {
+// 		const importPath = findPath(importName, filePath);
+// 		if(fs.existsSync(importPath)) {
+// 			setSymbolTable(symbolTables, importPath);
+// 		}
+// 	});
+// 	validateFile(filePath, true);
+// });
 
 /* async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
@@ -300,31 +307,34 @@ function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 	const initNode = symbolTables.getPT(filePath);
 	if (initNode) {
-		findRecoveredNode(initNode)?.forEach(x => {
-			const node = x.n;
-			const name = x.s;
-			if (node.location?.startLine) {
-				const diagnostic: Diagnostic = {
-					severity: DiagnosticSeverity.Error,
-					range: {
-						start: { line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0 },
-						end: { line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0 }
-					},
-					// range: {
-					// 	start: {line: 0, character: 0},
-					// 	end: {line: 1, character: 1}
-					// },
-					// message: `Parse error. Was expected: ` + node.name,
-					message: `Parse error in ${node.name}.` + (name.toUpperCase()[0] !== name[0] ? ` Was expected: ${name}` : ` Missing token: ${name}`),
-					source: 'lama-lsp'
-				};
-				diagnostics.push(diagnostic);
-			}
-			else if(name.toUpperCase()[0] == name[0]) {
-				connection.sendRequest('log_info', "found inserted token: " + name);
-				connection.sendRequest('log_info', "its location: " + node.location);
-			}
-		});
+		// findRecoveredNode(initNode)?.forEach(x => {
+		// 	const node = x.n;
+		// 	const name = x.s;
+		// 	if (node.location?.startLine) {
+		// 		const diagnostic: Diagnostic = {
+		// 			severity: DiagnosticSeverity.Error,
+		// 			range: {
+		// 				start: { line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0 },
+		// 				end: { line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0 }
+		// 			},
+		// 			// range: {
+		// 			// 	start: {line: 0, character: 0},
+		// 			// 	end: {line: 1, character: 1}
+		// 			// },
+		// 			// message: `Parse error. Was expected: ` + node.name,
+		// 			message: `Parse error in ${node.name}.` + (name.toUpperCase()[0] !== name[0] ? ` Was expected: ${name}` : ` Missing token: ${name}`),
+		// 			source: 'lama-lsp'
+		// 		};
+		// 		diagnostics.push(diagnostic);
+		// 	}
+		// 	else if(name.toUpperCase()[0] == name[0]) {
+		// 		connection.sendRequest('log_info', "found inserted token: " + name);
+		// 		connection.sendRequest('log_info', "its location: " + node.location);
+		// 	}
+		// });
+		// if(symbolTables.getParseErrors(filePath)?.length) {
+		handleParseErrors(symbolTables.getParseErrors(filePath) ?? []).forEach(d => {diagnostics.push(d)});
+		// }
 	}
 	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
 }
@@ -425,7 +435,7 @@ connection.onDefinition((params) => {
 		const offset = document.offsetAt(pos);
 		const path = ensurePath(uri);
 		// console.log(symbolTables.getPT(path));
-		// connection.sendRequest('log_info', symbolTables.getPT(path));
+		connection.sendRequest('log_info', symbolTables.getPT(path));
 		const initNode = symbolTables.getPT(path);
 		const token = computeToken(initNode, offset);
 		if (token && token.scope) {

@@ -7,6 +7,7 @@ import { ReferenceVisitor } from './ref_visitor';
 import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
 import { Range, Position, MarkupContent, Location } from 'vscode-languageserver';
+import { parse } from 'path';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
     if (input === undefined) {
@@ -16,6 +17,10 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
     if (input) {
         const parser = new LamaParser();
         const initNode = parser.parse(input);
+        symbolTables.updateParseErrors(filePath, parser.errors);
+        // if(parser.errors.length > 0) {
+        //     console.log(`Parse error in file ${filePath}: `, parser.errors);
+        // }
 
         let publicScope = new Scope();
         let privateScope = new Scope(publicScope);
@@ -163,12 +168,12 @@ export function findRecoveredNode(childNode: CstNode | IToken, parentNode?: CstN
     //     }
     // }
     if (isCstNode(childNode)) {
-        if (childNode.recoveredNode && childNode.location == undefined) {
+        if (/* childNode.recoveredNode &&  */isNaN(childNode.location?.startOffset ?? 0)) {
             // const breaker = findRecoveredChild(node);
             foundNodes.push({n: parentNode, s: childNode.name});
         }
 
-        else if(childNode.recoveredNode) {
+        else if (childNode.recoveredNode) {
             foundNodes.push({n: childNode, s: childNode.name});
         }
     

@@ -117,6 +117,11 @@ const Whitespace = createToken({
   group: Lexer.SKIPPED
 })
 
+// const EOF = createToken({
+//   name: 'EOF',
+//   pattern: /$(?![\r\n])/
+// })
+
 export const vocabulary = [
   Whitespace,
   BlockComment,
@@ -199,7 +204,7 @@ export const vocabulary = [
   LIdentifier,
   DecimalLiteral,
   StringLiteral,
-  CharLiteral
+  CharLiteral,
 ]
 
 const debug = process.env.NODE_ENV === 'development'
