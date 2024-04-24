@@ -19,14 +19,22 @@ This Language Server works for Lama language. It has the following language feat
 
 - Syntax Highlighting
 
+![hippo](./gif/symbol_highlighting.gif)
+
 - Go-To Definition
 
 ![hippo](./gif/go_to_definition.gif)
 
 - Find References
+- 
+![hippo](./gif/find_references.gif)
 
 - Rename
 
+![hippo](./gif/rename.gif)
+
 - Hover
+  
+![hippo](./gif/hover.gif)
 
 - File Diagnostic
