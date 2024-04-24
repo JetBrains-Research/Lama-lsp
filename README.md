@@ -26,7 +26,7 @@ This Language Server works for Lama language. It has the following language feat
 ![hippo](./gif/go_to_definition.gif)
 
 - Find References
-- 
+ 
 ![hippo](./gif/find_references.gif)
 
 - Rename
@@ -38,3 +38,9 @@ This Language Server works for Lama language. It has the following language feat
 ![hippo](./gif/hover.gif)
 
 - File Diagnostic
+
+![hippo](./gif/nameerror.gif)
+
+![hippo](./gif/importerror.gif)
+
+![hippo](./gif/EOFerror.gif)
