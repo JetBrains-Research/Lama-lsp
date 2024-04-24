@@ -21,6 +21,8 @@ This Language Server works for Lama language. It has the following language feat
 
 - Go-To Definition
 
+![hippo](./gif/go_to_definition.gif)
+
 - Find References
 
 - Rename

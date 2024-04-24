@@ -8,4 +8,4 @@ public infixr ** before * (f, g) {
 }
 
 public y = x + 5,
-       z = x + 6;
+       z = y + 6;
