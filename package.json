@@ -99,5 +99,6 @@
 		"vscode-languageserver": "^8.1.0",
 		"vscode-languageserver-textdocument": "^1.0.8"
 	},
-	"repository": "https://github.com/JetBrains-Research/Lama-lsp.git"
+	"repository": "https://github.com/JetBrains-Research/Lama-lsp.git",
+	"icon": "./languages/lama.jpg"
 }
