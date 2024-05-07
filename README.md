@@ -17,37 +17,37 @@ Language Server for Lama based on vscode lsp-sample and Lama Language Extension.
 
 This Language Server works for Lama language. It has the following language features:
 
-- Syntax Highlighting
+- **Syntax Highlighting**
 
 When you place the cursor on a symbol, all of its appearances in the code will also be highlighted.
 
 ![hippo](./gif/symbol_highlighting.gif)
 
-- Go-To Definition
+- **Go-To Definition**
 
 Using the "Go to Definition" function (F12 by default), the cursor will be moved to the code location where the symbol was defined.
 
 ![hippo](./gif/go_to_definition.gif)
 
-- Find References
+- **Find References**
 
 If you use the "Go to References" function (Shift+F12 by default), it will give you a list of places in the code where the given symbol occurs. If you further click on one of the occurences, the cursor will be moved to its location.
  
 ![hippo](./gif/find_references.gif)
 
-- Rename
+- **Rename**
 
 When using the "Rename Symbol" function (F2), a pop-up box will appear in which you must enter a new symbol name. When you finish typing and press Enter, all occurrences of the symbol will be replaced by the entered value.
 
 ![hippo](./gif/rename.gif)
 
-- Hover
+- **Hover**
 
 When you move the cursor over a function, a pop-up window will appear with information about the function (name, arguments and comment, if it was left when declaring the function)
   
 ![hippo](./gif/hover.gif)
 
-- File Diagnostic
+- **File Diagnostic**
 
 Lsp server also supports file diagnostics for various language errors.
 
