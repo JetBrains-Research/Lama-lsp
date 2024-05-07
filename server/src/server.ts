@@ -21,9 +21,9 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree } from './go-to-definition';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs } from './go-to-definition';
 import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
-import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri } from 'vscode-languageserver';
+import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
 import {getStartPosition, getEndPosition} from './def_visitor'
@@ -79,7 +79,11 @@ connection.onInitialize((params: InitializeParams) => {
 			documentHighlightProvider: true,
 			documentFormattingProvider: false,
 			hoverProvider: true,
-			renameProvider: true
+			renameProvider: true,
+			signatureHelpProvider: {
+				"triggerCharacters" : ['('],
+				"retriggerCharacters": [',']
+			}
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -358,7 +362,7 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 	const pScope = symbolTables.getST(filePath)?.publicScope;
 	pScope?.getArgErrors()?.forEach((argError) => { 
 				const diagnostic: Diagnostic = {
-					severity: DiagnosticSeverity.Warning,
+					severity: DiagnosticSeverity.Error,
 					range: argError[0],
 					message: `Number of arguments: ` + argError[1] + `, but expected: ` + argError[2],
 					source: 'lama-lsp'
@@ -370,7 +374,7 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 		const defArgs = defScope?.getNArgs(argResolve[0]);
 		if(defScope && defArgs != argResolve[2]) {
 			const diagnostic: Diagnostic = {
-				severity: DiagnosticSeverity.Warning,
+				severity: DiagnosticSeverity.Error,
 				range: argResolve[1],
 				message: `Number of arguments: ` + argResolve[2] + `, but expected: ` + defArgs,
 				source: 'lama-lsp'
@@ -378,7 +382,6 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 			diagnostics.push(diagnostic);
 		}
 	})
-	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -598,6 +601,47 @@ connection.onRenameRequest(params => {
 		}
 	}
 	return undefined;
+});
+
+// let signatureConst = 0;
+
+connection.onSignatureHelp(params => {
+	// if(params.context?.activeSignatureHelp)
+	// params.context?.isRetrigger
+	const document = documents.get(params.textDocument.uri);
+	const filePath = ensurePath(params.textDocument.uri);
+	const activeSH = params.context?.activeSignatureHelp;
+	// console.log(params.context?.triggerCharacter, params.context?.triggerKind, params.context?.isRetrigger);
+	const pos = params.position;
+	if(document) {
+		const initNode = symbolTables.getPT(filePath);
+		const offset = document.offsetAt(pos) - 1;
+		const token = computeToken(initNode, offset);
+		const callArgs = initNode ? computeFArgs(initNode, offset + 1) : undefined;
+		if (document && !params.context?.isRetrigger) {
+			if (token && token.scope) {
+				const defScope = findDefScope(token.image, filePath, symbolTables, token.scope);
+				if (defScope) {
+					const funArgs = defScope.getFArgs(token.image);
+					const definition = defScope.get(token.image);
+					const signature_label = funArgs ?? 'failed_signature';
+					const response: SignatureHelp = {signatures: [{label: signature_label, 
+																documentation: getHoveredInfo(symbolTables.getLexResult(ensurePath(definition?.uri ?? ''))?.groups['comments'], definition?.range.start.line ?? 0),
+																parameters: signature_label.split(',').map(p => ({ label: p.trim()}))
+																}], activeParameter: 0};
+					return response;
+				}
+			}
+		}
+		else if(activeSH && callArgs) {
+			return {...activeSH,
+				activeParameter: callArgs.children?.Comma?.length ?? 0};
+		}
+		else if(params.context?.triggerCharacter == ')') {
+			return undefined;
+		}
+		return undefined;
+	}
 });
 // Make the text document manager listen on the connection
 // for open, change and close text document events

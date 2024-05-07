@@ -122,6 +122,27 @@ export function computeToken(node: any /* CstNode */, offset: number): any /* IT
     return undefined;
 }
 
+export function computeFArgs(node: CstNode, offset: number): any /* IToken | undefined */ {
+    for (const key in node.children) {
+        const element = node.children[key];
+        for (let i = 0; i < element.length; i++) {
+            if((element[i] as CstNode).name == "postfixCall" && inside(offset, (element[i] as CstNode).location)) {
+                // console.log('detected fArgs: ', element[i]);
+                return element[i];
+            }
+            if (element[i].hasOwnProperty("location") && inside(offset, (element[i] as CstNode).location)) {
+                return computeFArgs((element[i] as CstNode), offset);
+            }
+            else {
+                if (inside(offset, element[i]) && (element[i] as any).scope) {
+                    return undefined;
+                }
+            }
+        }
+    }
+    return undefined;
+}
+
 export function getHoveredInfo(lexResult: IToken[] | undefined, line: number): string {
 	let hoveredInfo: string = '';
     if(lexResult && lexResult.length > 0) {
