@@ -1,4 +1,4 @@
-import { Location, Range } from 'vscode-languageserver'
+import { CompletionItemKind, Location, Range, SymbolKind } from 'vscode-languageserver'
 import { IToken } from 'chevrotain'
 
 type ArgError = [Range, number, number];
@@ -48,6 +48,11 @@ export class AbstractScope<T> {
   
 	public add (identifier: string, item: T): void {
 	  this.definitions[identifier] = item
+	}
+
+	public getNames (): {[identifier: string]: T} {
+		return this.definitions
+		// return Object.keys(this.definitions)
 	}
   
 	public addReference (identifier: string, location: Location): void {
@@ -100,4 +105,12 @@ export class AbstractScope<T> {
 	}
   }
 
-export class DefaultScope extends AbstractScope< Location > {}
+export class SymbolClass {
+	symboltype: CompletionItemKind
+
+	constructor(x: CompletionItemKind) {
+		this.symboltype = x;
+	}
+}
+
+export class DefaultScope extends AbstractScope< Location & SymbolClass > {}

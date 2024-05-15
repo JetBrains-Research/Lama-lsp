@@ -21,9 +21,9 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs } from './go-to-definition';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs, collectNames } from './go-to-definition';
 import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
-import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp } from 'vscode-languageserver';
+import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp, SymbolKind } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
 import {getStartPosition, getEndPosition} from './def_visitor'
@@ -83,6 +83,9 @@ connection.onInitialize((params: InitializeParams) => {
 			signatureHelpProvider: {
 				"triggerCharacters" : ['('],
 				"retriggerCharacters": [',']
+			},
+			completionProvider: {
+				"resolveProvider" : false
 			}
 		}
 	};
@@ -438,7 +441,7 @@ connection.onDefinition((params) => {
 		const offset = document.offsetAt(pos);
 		const path = ensurePath(uri);
 		// console.log(symbolTables.getPT(path));
-		connection.sendRequest('log_info', symbolTables.getPT(path));
+		// connection.sendRequest('log_info', symbolTables.getPT(path));
 		const initNode = symbolTables.getPT(path);
 		const token = computeToken(initNode, offset);
 		if (token && token.scope) {
@@ -606,8 +609,6 @@ connection.onRenameRequest(params => {
 // let signatureConst = 0;
 
 connection.onSignatureHelp(params => {
-	// if(params.context?.activeSignatureHelp)
-	// params.context?.isRetrigger
 	const document = documents.get(params.textDocument.uri);
 	const filePath = ensurePath(params.textDocument.uri);
 	const activeSH = params.context?.activeSignatureHelp;
@@ -643,6 +644,52 @@ connection.onSignatureHelp(params => {
 		return undefined;
 	}
 });
+
+const TOKEN_DEFAULTS: Set<string> = new Set(["if", "case"]);
+
+function handleDefaultToken(token: string): CompletionItem {
+	let suggestion: CompletionItem = { label: token+'-expression' };
+	if(token == 'if') {
+		suggestion.insertText = "if _ then _ else _ fi";
+	}
+	if(token == 'case') {
+		suggestion.insertText = "case _ of \n _ -> _ \n esac"
+	}
+	return suggestion;
+}
+
+connection.onCompletion(params => {
+	const document = documents.get(params.textDocument.uri);
+	const filePath = ensurePath(params.textDocument.uri);
+	if (document) {
+		const offset = document.offsetAt(params.position);
+		const initNode = symbolTables.getPT(filePath);
+		const token = computeToken(initNode, offset);
+		if (token) {
+			let response: CompletionItem[] = [];
+			if(token.scope) {
+				const sufficientNames = collectNames(filePath, symbolTables, token.scope);	
+				response = Object.entries(sufficientNames).map(([name, ntype]) => ({ label: name, 
+																					 kind: ntype.symboltype, 
+																					 insertText: ntype.symboltype == CompletionItemKind.Function ? name+'() {\n\n}' : name}));
+			}
+			response.push({label: 'if-expression', insertText: 'if _ then _ else _ fi', kind: CompletionItemKind.Keyword});
+			response.push({label: 'case-expression', insertText: 'case _ of \n   _ -> _ \nesac', kind: CompletionItemKind.Keyword});
+			// if (TOKEN_DEFAULTS.has(token.image)) {
+			// 	response.push(handleDefaultToken(token.image));
+			// }
+			return response;
+		}
+	}
+	return undefined;
+});
+
+// connection.onCompletionResolve(params => {
+// 	const document = documents.get(params.textDocument.uri);
+// 	const filePath = ensurePath(params.textDocument.uri);
+// 	return undefined;
+// });
+
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);

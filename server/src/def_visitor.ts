@@ -12,7 +12,7 @@ import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChil
   CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode, FunctionArgumentsCstNode} from './lama_cst';
 import { DefaultScope as Scope } from './Scope';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
-import { Range, Position } from 'vscode-languageserver';
+import { Range, Position, CompletionItemKind } from 'vscode-languageserver';
 import { ensurePath, readFile } from './path-utils';
 
 export function getStartPosition (token: any /* IToken */): Position {
@@ -142,7 +142,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
           getStartPosition(identifierToken),
           getEndPosition(identifierToken)
         ),
-        uri: this.documentUri
+        uri: this.documentUri,
+        symboltype: CompletionItemKind.Function
       })
     }
 	else {
@@ -151,7 +152,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         getStartPosition(identifierToken),
         getEndPosition(identifierToken)
       ),
-		  uri: this.documentUri
+		  uri: this.documentUri,
+      symboltype: CompletionItemKind.Function
 	  })
 	}
 	
@@ -180,7 +182,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
           getStartPosition(operatorToken),
           getEndPosition(operatorToken)
         ),
-        uri: this.documentUri
+        uri: this.documentUri,
+        symboltype: CompletionItemKind.Operator
       })
     }
 	else {
@@ -189,7 +192,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         getStartPosition(operatorToken),
         getEndPosition(operatorToken)
       ),
-		  uri: this.documentUri
+		  uri: this.documentUri,
+      symboltype: CompletionItemKind.Operator
 	  })
 	}
 
@@ -217,7 +221,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         getStartPosition(identifierToken),
         getEndPosition(identifierToken)
       ),
-      uri: this.documentUri
+      uri: this.documentUri,
+      symboltype: CompletionItemKind.Variable
     }) 
 	if (scope === this.public_scope) {
 		scope = this.private_scope;	
@@ -405,7 +410,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         getStartPosition(identifierToken),
         getEndPosition(identifierToken)
       ),
-      uri: this.documentUri
+      uri: this.documentUri,
+      symboltype: CompletionItemKind.Variable
     })
     this.registerScope(ctx.LIdentifier, scope)
     this.visit(ctx.pattern, scope)

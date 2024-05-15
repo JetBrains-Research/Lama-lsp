@@ -1,12 +1,12 @@
 import { SymbolTable, SymbolTables } from './SymbolTable'
-import { DefaultScope as Scope } from './Scope';
+import { DefaultScope as Scope, SymbolClass } from './Scope';
 import { CstNode, ILexingResult, IToken } from 'chevrotain';
 import { LamaParser } from './parser';
 import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
 import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
-import { Range, Position, MarkupContent, Location } from 'vscode-languageserver';
+import { Range, Position, MarkupContent, Location, SymbolKind } from 'vscode-languageserver';
 import { parse } from 'path';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
@@ -85,6 +85,30 @@ export function findDefScope(name: string, path: string, symbolTables: SymbolTab
     return undefined;
 }
 
+export function collectNames(path: string, symbolTables: SymbolTables, scope?: Scope): {[name: string]: SymbolClass} {
+    let names: {[name: string]: SymbolClass} = {};
+    if (!scope) {
+        scope = symbolTables.getST(path)?.publicScope;
+    }
+    while (scope !== undefined) {
+        names = {...names, ... scope.getNames()};
+        // names.push(...scope.getNames());
+        scope = scope.parent;
+    }
+    const imports = symbolTables.getST(path)?.imports;
+    if (imports) {
+        for (const moduleName of imports) {
+            const modulePath = findPath(moduleName, path);
+            scope = symbolTables.getST(modulePath)?.publicScope;
+            if (scope){
+                names = {...names, ... scope.getNames()};
+                // names.push(...scope.getNames());
+            }
+        }
+    }
+    return names;
+}
+
 export function findScopeInFile(token: any): Scope | undefined {
     const name = token.image;
     let scope = token.scope;
@@ -105,16 +129,18 @@ export function findPublicScope(token: any): Scope {
     return scope;
 }
 
-export function computeToken(node: any /* CstNode */, offset: number): any /* IToken | undefined */ {
-    for (const key in node.children) {
-        const element = node.children[key];
-        for (let i = 0; i < element.length; i++) {
-            if (element[i].hasOwnProperty("location") && inside(offset, element[i].location)) {
-                return computeToken(element[i], offset);
-            }
-            else {
-                if (inside(offset, element[i]) && element[i].scope) {
-                    return element[i];
+export function computeToken(node: /* any */ CstNode | undefined, offset: number): any /* IToken | undefined */ {
+    if(node) {
+        for (const key in node.children) {
+            const element = node.children[key];
+            for (let i = 0; i < element.length; i++) {
+                if (element[i].hasOwnProperty("location") && inside(offset, (element[i] as CstNode).location)) {
+                    return computeToken((element[i] as CstNode), offset);
+                }
+                else {
+                    if (inside(offset, element[i]) && element[i].hasOwnProperty("image")/* && element[i].scope */) {
+                        return element[i];
+                    }
                 }
             }
         }
