@@ -115,7 +115,8 @@ export interface ExpressionCstNode extends CstNode {
 }
 
 export type ExpressionCstChildren = {
-  basicExpression: BasicExpressionCstNode[];
+  letInExpression?: LetInExpressionCstNode[];
+  basicExpression?: BasicExpressionCstNode[];
   Semicolon?: IToken[];
   expression?: ExpressionCstNode[];
 };
@@ -277,6 +278,19 @@ export type ForExpressionCstChildren = {
   expression: (ExpressionCstNode)[];
   Do: IToken[];
   Od: IToken[];
+};
+
+export interface LetInExpressionCstNode extends CstNode {
+  name: "letInExpression";
+  children: LetInExpressionCstChildren;
+}
+
+export type LetInExpressionCstChildren = {
+  Let: IToken[];
+  pattern: PatternCstNode[];
+  Equal: IToken[];
+  expression: (ExpressionCstNode)[];
+  In: IToken[];
 };
 
 export interface CaseExpressionCstNode extends CstNode {
@@ -545,6 +559,7 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   whileDoExpression(children: WhileDoExpressionCstChildren, param?: IN): OUT;
   doWhileExpression(children: DoWhileExpressionCstChildren, param?: IN): OUT;
   forExpression(children: ForExpressionCstChildren, param?: IN): OUT;
+  letInExpression(children: LetInExpressionCstChildren, param?: IN): OUT;
   caseExpression(children: CaseExpressionCstChildren, param?: IN): OUT;
   caseBranchPrefix(children: CaseBranchPrefixCstChildren, param?: IN): OUT;
   lazyExpression(children: LazyExpressionCstChildren, param?: IN): OUT;

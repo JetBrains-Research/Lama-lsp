@@ -1,4 +1,4 @@
-import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult, Rule, EOF} from 'chevrotain'
+import { EmbeddedActionsParser, CstParser, CstElement, CstNode, IToken, ILexingError, ILexingResult, Rule, EOF } from 'chevrotain'
 import Tokens, { vocabulary, lexer } from './lexer'
 
 const debug = process.env.NODE_ENV === 'development'
@@ -7,11 +7,11 @@ export class LamaParser extends CstParser {
 
   public lexingResult?: ILexingResult
 
-  public static reset (parser: LamaParser): void {
+  public static reset(parser: LamaParser): void {
     parser.reset()
   }
 
-  constructor () {
+  constructor() {
     super(vocabulary, {
       traceInitPerf: debug, // false for production
       skipValidations: !debug, // true for production
@@ -21,13 +21,13 @@ export class LamaParser extends CstParser {
     this.performSelfAnalysis()
   }
 
-  public parse (text: string): CstNode {
+  public parse(text: string): CstNode {
     this.lexingResult = lexer.tokenize(text)
     this.input = this.lexingResult.tokens
     return this.compilationUnit()
   }
 
-  public lex (text: string): IToken[]{
+  public lex(text: string): IToken[] {
     return lexer.tokenize(text).tokens
   }
 
@@ -39,7 +39,7 @@ export class LamaParser extends CstParser {
     })
     this.SUBRULE(this.scopeExpression)
     // this.CONSUME(Tokens.EOF)
-  }) 
+  })
 
   private readonly scopeExpression = this.RULE('scopeExpression', () => {
     this.MANY(() => {
@@ -142,11 +142,23 @@ export class LamaParser extends CstParser {
   })
 
   private readonly expression = this.RULE('expression', () => {
-    this.SUBRULE(this.basicExpression)
-    this.OPTION(() => {
-      this.CONSUME(Tokens.Semicolon)
-      this.SUBRULE(this.expression)
-    })
+    this.OR([
+      {
+        ALT: () => {
+          this.SUBRULE(this.letInExpression)
+        }
+      },
+      {
+        ALT: () => {
+          this.SUBRULE(this.basicExpression)
+          this.OPTION(() => {
+            this.CONSUME(Tokens.Semicolon)
+            this.SUBRULE(this.expression)
+          })
+        }
+      }
+    ])
+
   })
 
   private readonly basicExpression = this.RULE('basicExpression', () => { // FIXME, all above is correct
@@ -160,26 +172,26 @@ export class LamaParser extends CstParser {
     })
   })
 
-/*   private readonly basicExpression = this.RULE('basicExpression', () => { // FIXME, all above is correct
-    this.OR([
-      {
-        GATE: this.BACKTRACK(this.syntaxExpression),
-        ALT: () => this.SUBRULE(this.syntaxExpression)
-      },
-      {
-        ALT: () => {
-        this.SUBRULE1(this.postfixExpression)
-        this.MANY({
-          GATE: () => !this.BACKTRACK(this.caseBranchPrefix).apply(this),
-          DEF: () => {
-            this.CONSUME(Tokens.Operator)
-            this.SUBRULE2(this.postfixExpression)
+  /*   private readonly basicExpression = this.RULE('basicExpression', () => { // FIXME, all above is correct
+      this.OR([
+        {
+          GATE: this.BACKTRACK(this.syntaxExpression),
+          ALT: () => this.SUBRULE(this.syntaxExpression)
+        },
+        {
+          ALT: () => {
+          this.SUBRULE1(this.postfixExpression)
+          this.MANY({
+            GATE: () => !this.BACKTRACK(this.caseBranchPrefix).apply(this),
+            DEF: () => {
+              this.CONSUME(Tokens.Operator)
+              this.SUBRULE2(this.postfixExpression)
+            }
+          })
           }
-        })
         }
-      }
-    ])
-  }) */
+      ])
+    }) */
 
   private readonly postfixExpression = this.RULE('postfixExpression', () => {
     this.OPTION(() => {
@@ -233,14 +245,14 @@ export class LamaParser extends CstParser {
           this.CONSUME(Tokens.Skip)
         }
       },
-/*       {
-        ALT: () => {
-          this.CONSUME(Tokens.Return)
-          this.OPTION1(() => {
-            this.SUBRULE(this.basicExpression)
-          })
-        }
-      }, */
+      /*       {
+              ALT: () => {
+                this.CONSUME(Tokens.Return)
+                this.OPTION1(() => {
+                  this.SUBRULE(this.basicExpression)
+                })
+              }
+            }, */
       /* {
         ALT: () => {
           this.CONSUME(Tokens.LCurly)
@@ -292,11 +304,11 @@ export class LamaParser extends CstParser {
           this.SUBRULE(this.doWhileExpression)
         }
       },
-/*       {
-        ALT: () => {
-          this.SUBRULE(this.repeatExpression)
-        }
-      }, */
+      /*       {
+              ALT: () => {
+                this.SUBRULE(this.repeatExpression)
+              }
+            }, */
       {
         ALT: () => {
           this.SUBRULE(this.forExpression)
@@ -433,12 +445,12 @@ export class LamaParser extends CstParser {
     this.CONSUME(Tokens.Od)
   })
 
-/*   private readonly repeatExpression = this.RULE('repeatExpression', () => {
-    this.CONSUME(Tokens.Repeat)
-    this.SUBRULE(this.scopeExpression)
-    this.CONSUME(Tokens.Until)
-    this.SUBRULE(this.basicExpression)
-  }) */
+  /*   private readonly repeatExpression = this.RULE('repeatExpression', () => {
+      this.CONSUME(Tokens.Repeat)
+      this.SUBRULE(this.scopeExpression)
+      this.CONSUME(Tokens.Until)
+      this.SUBRULE(this.basicExpression)
+    }) */
 
   private readonly forExpression = this.RULE('forExpression', () => {
     this.CONSUME(Tokens.For)
@@ -451,6 +463,26 @@ export class LamaParser extends CstParser {
     this.SUBRULE2(this.scopeExpression)
     this.CONSUME(Tokens.Od)
   })
+
+  // private readonly letInExpression = this.RULE('letInExpression', () => {
+  //   this.CONSUME(Tokens.Let)
+  //   this.CONSUME(Tokens.LIdentifier)
+  //   this.CONSUME(Tokens.Equal)
+  //   this.SUBRULE1(this.expression)
+  //   this.CONSUME(Tokens.In)
+  //   // this.SUBRULE2(this.scopeExpression)
+  //   this.SUBRULE2(this.expression)
+  // })
+  private readonly letInExpression = this.RULE('letInExpression', () => {
+    this.CONSUME(Tokens.Let)
+    this.SUBRULE(this.pattern)
+    this.CONSUME(Tokens.Equal)
+    this.SUBRULE1(this.expression)
+    this.CONSUME(Tokens.In)
+    // this.SUBRULE2(this.scopeExpression)
+    this.SUBRULE2(this.expression)
+  })
+
 
   private readonly caseExpression = this.RULE('caseExpression', () => {
     this.CONSUME(Tokens.Case)
@@ -472,24 +504,24 @@ export class LamaParser extends CstParser {
     this.CONSUME(Tokens.Arrow)
   })
 
-/*   private readonly caseExpression = this.RULE('caseExpression', () => {
-    this.CONSUME(Tokens.Case)
-    this.SUBRULE(this.expression)
-    this.CONSUME(Tokens.Of)
-    this.AT_LEAST_ONE_SEP({
-      SEP: Tokens.Bar,
-      DEF: () => {
-        this.SUBRULE(this.caseBranch)
-      }
+  /*   private readonly caseExpression = this.RULE('caseExpression', () => {
+      this.CONSUME(Tokens.Case)
+      this.SUBRULE(this.expression)
+      this.CONSUME(Tokens.Of)
+      this.AT_LEAST_ONE_SEP({
+        SEP: Tokens.Bar,
+        DEF: () => {
+          this.SUBRULE(this.caseBranch)
+        }
+      })
+      this.CONSUME(Tokens.Esac)
     })
-    this.CONSUME(Tokens.Esac)
-  })
-
-  private readonly caseBranch = this.RULE('caseBranch', () => {
-    this.SUBRULE(this.pattern)
-    this.CONSUME(Tokens.Arrow)
-    this.SUBRULE(this.scopeExpression)
-  }) */
+  
+    private readonly caseBranch = this.RULE('caseBranch', () => {
+      this.SUBRULE(this.pattern)
+      this.CONSUME(Tokens.Arrow)
+      this.SUBRULE(this.scopeExpression)
+    }) */
 
 
   private readonly lazyExpression = this.RULE('lazyExpression', () => {
@@ -769,14 +801,18 @@ export class LamaParser extends CstParser {
     this.CONSUME(Tokens.LIdentifier)
     this.OPTION(() => {
       this.OR([
-        {ALT: () => {
-          this.CONSUME(Tokens.AtSign)
-          this.SUBRULE(this.pattern)
-        }},
-        {ALT: () => {
-          this.CONSUME(Tokens.AtHash)
-          this.CONSUME(Tokens.Shape)
-        }}
+        {
+          ALT: () => {
+            this.CONSUME(Tokens.AtSign)
+            this.SUBRULE(this.pattern)
+          }
+        },
+        {
+          ALT: () => {
+            this.CONSUME(Tokens.AtHash)
+            this.CONSUME(Tokens.Shape)
+          }
+        }
       ])
     })
   })

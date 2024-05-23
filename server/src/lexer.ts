@@ -2,7 +2,7 @@ import { createToken, Lexer } from 'chevrotain'
 
 const UIdentifier = createToken({ name: 'UIdentifier', pattern: /[A-Z][a-zA-Z_0-9]*/ })
 const LIdentifier = createToken({ name: 'LIdentifier', pattern: /[a-z][a-zA-Z_0-9]*/ })
-const DecimalLiteral = createToken({ name: 'DecimalLiteral', pattern: /-?[0-9]+/ })       
+const DecimalLiteral = createToken({ name: 'DecimalLiteral', pattern: /-?[0-9]+/ })
 const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"([^"]|"")*"/ })
 const CharLiteral = createToken({ name: 'CharLiteral', pattern: /'([^']|''|\\n|\\t)'/ })
 
@@ -43,6 +43,8 @@ const At = createToken({ name: 'At', pattern: /at/, longer_alt: LIdentifier, cat
 const Before = createToken({ name: 'Before', pattern: /before/, longer_alt: LIdentifier, categories: [InfixLevel] })
 const Box = createToken({ name: 'Box', pattern: /box/, longer_alt: LIdentifier, categories: [Shape] })                                //?
 /* const Boxed = createToken({ name: 'Boxed', pattern: /boxed/, longer_alt: LIdentifier, categories: [Shape] }) */
+const Let = createToken({ name: 'Let', pattern: /let/, longer_alt: LIdentifier })
+const In = createToken({ name: 'In', pattern: /in/, longer_alt: LIdentifier })
 const Case = createToken({ name: 'Case', pattern: /case/, longer_alt: LIdentifier })
 const Do = createToken({ name: 'Do', pattern: /do/, longer_alt: LIdentifier })
 const Elif = createToken({ name: 'Elif', pattern: /elif/, longer_alt: LIdentifier })
@@ -60,7 +62,7 @@ const InfixR = createToken({ name: 'InfixR', pattern: /infixr/, longer_alt: LIde
 const Infix = createToken({ name: 'Infix', pattern: /infix/, longer_alt: LIdentifier, categories: [Infixity] })
 const Lazy = createToken({ name: 'Lazy', pattern: /lazy/, longer_alt: LIdentifier })
 const Length = createToken({ name: 'Length', pattern: /length/, longer_alt: LIdentifier })                      //?
-/* const Local = createToken({ name: 'Local', pattern: /local/, longer_alt: LIdentifier }) */                
+/* const Local = createToken({ name: 'Local', pattern: /local/, longer_alt: LIdentifier }) */
 const Od = createToken({ name: 'Od', pattern: /od/, longer_alt: LIdentifier })
 const Of = createToken({ name: 'Of', pattern: /of/, longer_alt: LIdentifier })
 const Public = createToken({ name: 'Public', pattern: /public/, longer_alt: LIdentifier })
@@ -75,8 +77,8 @@ const Then = createToken({ name: 'Then', pattern: /then/, longer_alt: LIdentifie
 const True = createToken({ name: 'True', pattern: /true/, longer_alt: LIdentifier, categories: [BooleanLiteral] })
 /* const Unboxed = createToken({ name: 'Unboxed', pattern: /unboxed/, longer_alt: LIdentifier, categories: [Shape] }) */
 /* const Until = createToken({ name: 'Until', pattern: /until/, longer_alt: LIdentifier }) */
-const Val = createToken({name: 'Val', pattern: /val/, longer_alt: LIdentifier, categories: [Shape]})            //?
-const Var = createToken({name: 'Var', pattern: /var/, longer_alt: LIdentifier})            //?
+const Val = createToken({ name: 'Val', pattern: /val/, longer_alt: LIdentifier, categories: [Shape] })            //?
+const Var = createToken({ name: 'Var', pattern: /var/, longer_alt: LIdentifier })            //?
 /* const When = createToken({ name: 'When', pattern: /when/, longer_alt: LIdentifier }) */
 const While = createToken({ name: 'While', pattern: /while/, longer_alt: LIdentifier })
 const LineComment = createToken({
@@ -133,6 +135,8 @@ export const vocabulary = [
   Before,
   Box,
   /* Boxed, */
+  Let,
+  In,
   Case,
   Do,
   Elif,
@@ -227,6 +231,8 @@ export default {
   Before,
   Box,
   /* Boxed, */
+  Let,
+  In,
   Case,
   Do,
   Elif,

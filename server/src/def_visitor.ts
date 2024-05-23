@@ -1,52 +1,55 @@
 import { IToken, CstNode } from 'chevrotain';
 import { LamaParser } from './parser';
-import type {ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren, 
-  FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren, 
-  VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode, 
-  BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren, 
-  ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren, 
-  DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren, 
-  SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren, 
-  PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren, 
+import type {
+  ICstNodeVisitor, CompilationUnitCstChildren, ScopeExpressionCstChildren, DefinitionCstChildren,
+  FunctionDefinitionCstChildren, FunctionArgumentsCstChildren, FunctionBodyCstChildren, InfixDefinitionCstChildren,
+  VariableDefinitionCstChildren, VariableDefinitionItemCstChildren, ExpressionCstChildren, BasicExpressionCstNode,
+  BasicExpressionCstChildren, PostfixCallCstChildren, PostfixExpressionCstChildren, PrimaryCstChildren, ArrayExpressionCstChildren,
+  ListExpressionBodyCstChildren, SymbolExpressionCstChildren, IfExpressionCstChildren, ElsePartCstChildren, WhileDoExpressionCstChildren,
+  DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren,
+  SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren,
+  PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren,
   AsPatternCstChildren, CaseBranchPrefixCstChildren,/* , CaseBranchCstChildren */
-  CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode, FunctionArgumentsCstNode} from './lama_cst';
+  CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode, FunctionArgumentsCstNode,
+  LetInExpressionCstChildren
+} from './lama_cst';
 import { DefaultScope as Scope } from './Scope';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 import { Range, Position, CompletionItemKind } from 'vscode-languageserver';
 import { ensurePath, readFile } from './path-utils';
 
-export function getStartPosition (token: any /* IToken */): Position {
+export function getStartPosition(token: any /* IToken */): Position {
   return Position.create(
-    token.startLine? token.startLine - 1 : 0,
-    token.startColumn? token.startColumn - 1 : 0
+    token.startLine ? token.startLine - 1 : 0,
+    token.startColumn ? token.startColumn - 1 : 0
   )
 }
 
-export function getEndPosition (token: any /* IToken */): Position {
+export function getEndPosition(token: any /* IToken */): Position {
   return Position.create(
-    token.endLine? token.endLine - 1 : 0,
-    token.endColumn? token.endColumn : 0
+    token.endLine ? token.endLine - 1 : 0,
+    token.endColumn ? token.endColumn : 0
   )
 }
 
 function isCstNode(node: CstNode | IToken): node is CstNode {
-	return 'children' in node;
+  return 'children' in node;
 }
 
 function collectTokensFromSubtree(node: CstNode, tokens: IToken[]): void {
-	for (const childKey in node.children) {
-		if (node.children[childKey] instanceof Array) {
-			for (const child of node.children[childKey]) {
-				if (isCstNode(child)) {
-					// If the child is another CST node, recurse into it
-					collectTokensFromSubtree(child, tokens);
-				} else if (child.image != ","){
-					// If the child is a token, add it to the list
-					tokens.push(child);
-				}
-			}
-		}
-	}
+  for (const childKey in node.children) {
+    if (node.children[childKey] instanceof Array) {
+      for (const child of node.children[childKey]) {
+        if (isCstNode(child)) {
+          // If the child is another CST node, recurse into it
+          collectTokensFromSubtree(child, tokens);
+        } else if (child.image != ",") {
+          // If the child is a token, add it to the list
+          tokens.push(child);
+        }
+      }
+    }
+  }
 }
 
 const parser = new LamaParser()
@@ -56,8 +59,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
 
   constructor(
     public documentUri: DocumentUri,
-	  public public_scope: Scope,
-	  public private_scope: Scope,
+    public public_scope: Scope,
+    public private_scope: Scope,
     private filecontent: string
   ) {
     super()
@@ -67,10 +70,10 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   // filecontent = readFile(ensurePath(this.documentUri));
 
   visit(node: any, param?: any) {
-    if(node === undefined) {
+    if (node === undefined) {
       return;
     }
-    else if(Array.isArray(node)) {
+    else if (Array.isArray(node)) {
       node.forEach((element: any) => {
         super.visit(element, param);
         /* console.log(element.name) */
@@ -83,8 +86,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   }
 
   protected registerScope(token: any[] | undefined, scope: Scope) {
-    if(token) {
-      for(let i = 0; i < token.length; i++) {
+    if (token) {
+      for (let i = 0; i < token.length; i++) {
         token[i].scope = scope
         /* console.log(token[i].image) */
       }
@@ -93,17 +96,17 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
 
   protected registerFArgs(ftoken: any, fargnode: FunctionArgumentsCstNode, isPublic: boolean) {
     let fargs = "";
-    if(fargnode.location && fargnode.location.endOffset) {
+    if (fargnode.location && fargnode.location.endOffset) {
       fargs = this.filecontent?.substring(fargnode.location?.startOffset, fargnode.location?.endOffset + 1);
     }
-    if(isPublic) {
+    if (isPublic) {
       this.public_scope.addFArgs(ftoken.image, fargs);
       this.public_scope.addNArgs(ftoken.image, fargnode.children.pattern?.length ?? 0);
     } else {
       ftoken.scope.addFArgs(ftoken.image, fargs);
       ftoken.scope.addNArgs(ftoken.image, fargnode.children.pattern?.length ?? 0);
     }
-	}
+  }
 
   protected regArgs(token: any, n: number) {
     token.nArgs = n;
@@ -114,27 +117,27 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     const post = postfix ? postfix[0] : undefined;
     const funId = prim.children.LIdentifier;
     const funCall = post?.children.postfixCall;
-    if(funId && funCall) {
+    if (funId && funCall) {
       this.regArgs(funId[0], funCall[0].children.expression?.length ?? 0);
     }
   }
 
   compilationUnit(ctx: CompilationUnitCstChildren, scope: Scope) {
     this.visit(ctx.scopeExpression, scope/* new Scope(scope) */)
-  } 
+  }
 
   scopeExpression(ctx: ScopeExpressionCstChildren, scope: Scope) {
     this.visit(ctx.definition, scope)
     this.visit(ctx.expression, scope)
   }
 
-  definition(ctx: DefinitionCstChildren, scope: Scope){
+  definition(ctx: DefinitionCstChildren, scope: Scope) {
     this.visit(ctx.functionDefinition, scope)
     this.visit(ctx.infixDefinition, scope)
     this.visit(ctx.variableDefinition, scope)
   }
 
-  functionDefinition(ctx: FunctionDefinitionCstChildren, scope: Scope) { 
+  functionDefinition(ctx: FunctionDefinitionCstChildren, scope: Scope) {
     const identifierToken = ctx.LIdentifier[0]
     if (ctx.Public && scope === this.private_scope) {
       this.public_scope.add(identifierToken.image, {
@@ -146,17 +149,17 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         symboltype: CompletionItemKind.Function
       })
     }
-	else {
-	  scope.add(identifierToken.image, {
-      range: Range.create(
-        getStartPosition(identifierToken),
-        getEndPosition(identifierToken)
-      ),
-		  uri: this.documentUri,
-      symboltype: CompletionItemKind.Function
-	  })
-	}
-	
+    else {
+      scope.add(identifierToken.image, {
+        range: Range.create(
+          getStartPosition(identifierToken),
+          getEndPosition(identifierToken)
+        ),
+        uri: this.documentUri,
+        symboltype: CompletionItemKind.Function
+      })
+    }
+
     this.registerScope(ctx.LIdentifier, scope)
     this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public !== undefined);
     // ctx.functionArguments[0].children.pattern[0].location
@@ -173,7 +176,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     this.visit(ctx.scopeExpression, scope)
   }
 
-  infixDefinition(ctx: InfixDefinitionCstChildren, scope: Scope) {    
+  infixDefinition(ctx: InfixDefinitionCstChildren, scope: Scope) {
     const operatorToken = ctx.Operator[0]
     const identifier = operatorToken.image
     if (ctx.Public && scope === this.private_scope) {
@@ -186,16 +189,16 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         symboltype: CompletionItemKind.Operator
       })
     }
-	else {
-	  scope.add(identifier, {
-      range: Range.create(
-        getStartPosition(operatorToken),
-        getEndPosition(operatorToken)
-      ),
-		  uri: this.documentUri,
-      symboltype: CompletionItemKind.Operator
-	  })
-	}
+    else {
+      scope.add(identifier, {
+        range: Range.create(
+          getStartPosition(operatorToken),
+          getEndPosition(operatorToken)
+        ),
+        uri: this.documentUri,
+        symboltype: CompletionItemKind.Operator
+      })
+    }
 
     this.registerScope(ctx.Operator, scope)
     this.registerFArgs(ctx.Operator[0], ctx.functionArguments[0], ctx.Public !== undefined);
@@ -208,9 +211,9 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     if (ctx.Public && scope === this.private_scope) {
       this.visit(ctx.variableDefinitionItem, this.public_scope)
     }
-	else {
-	  this.visit(ctx.variableDefinitionItem, scope)	
-	}
+    else {
+      this.visit(ctx.variableDefinitionItem, scope)
+    }
   }
 
   variableDefinitionItem(ctx: VariableDefinitionItemCstChildren, scope: Scope) {
@@ -223,10 +226,10 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
       ),
       uri: this.documentUri,
       symboltype: CompletionItemKind.Variable
-    }) 
-	if (scope === this.public_scope) {
-		scope = this.private_scope;	
-	}
+    })
+    if (scope === this.public_scope) {
+      scope = this.private_scope;
+    }
     this.registerScope(ctx.LIdentifier, scope)
     this.visit(ctx.basicExpression, scope)
   }
@@ -234,6 +237,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   expression(ctx: ExpressionCstChildren, scope: Scope) {
     this.visit(ctx.basicExpression, scope)
     this.visit(ctx.expression, scope)
+    this.visit(ctx.letInExpression, scope)
   }
 
   basicExpression(ctx: BasicExpressionCstChildren, scope: Scope) { // FIXME, all above is correct
@@ -247,7 +251,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     this.countArgs(ctx.primary, ctx.postfix)
   }
 
-  primary(ctx: PrimaryCstChildren, scope: Scope){ // TODO: Apply     
+  primary(ctx: PrimaryCstChildren, scope: Scope) { // TODO: Apply     
     this.registerScope(ctx.LIdentifier, scope)
     this.registerScope(ctx.Operator, scope)
     const fScope = new Scope(scope)
@@ -268,7 +272,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   }
 
   arrayExpression(ctx: ArrayExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)    
+    this.visit(ctx.expression, scope)
   }
 
   listExpressionBody(ctx: ListExpressionBodyCstChildren, scope: Scope) {
@@ -279,7 +283,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     this.visit(ctx.expression, scope)
   }
 
-  ifExpression(ctx: IfExpressionCstChildren, scope: Scope) {  
+  ifExpression(ctx: IfExpressionCstChildren, scope: Scope) {
     this.visit(ctx.expression, scope)
     this.visit(ctx.scopeExpression, new Scope(scope))
     this.visit(ctx.elsePart, scope)
@@ -309,14 +313,21 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     this.visit(ctx.scopeExpression, forScope)
   }
 
+  letInExpression(ctx: LetInExpressionCstChildren, scope: Scope) {
+    this.visit(ctx.expression[0], scope)
+    const firstScope = new Scope(scope)
+    this.visit(ctx.pattern[0], firstScope)
+    this.visit(ctx.expression[1], firstScope)
+  }
+
   caseExpression(ctx: CaseExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope) 
+    this.visit(ctx.expression, scope)
     const firstScope = new Scope(scope)
     this.visit(ctx.pattern[0], firstScope)
     this.visit(ctx.scopeExpression[0], firstScope)
-    for(let i = 1; i < ctx.scopeExpression.length; i++) {
+    for (let i = 1; i < ctx.scopeExpression.length; i++) {
       const curScope = new Scope(scope)
-      this.visit(ctx.caseBranchPrefix?.[i-1], curScope)
+      this.visit(ctx.caseBranchPrefix?.[i - 1], curScope)
       this.visit(ctx.scopeExpression[i], curScope)
     }
   }
@@ -343,7 +354,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   }
 
   curlyScopeExpression(ctx: CurlyScopeExpressionCstChildren, scope: Scope): void {
-    
+
   }
 
   syntaxBinding(ctx: SyntaxBindingCstChildren, scope: Scope) {
