@@ -1,3 +1,4 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
 /* --------------------------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
@@ -26,7 +27,6 @@ import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-
 import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp, SymbolKind } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { formatTextDocument } from './formatter';
-import {getStartPosition, getEndPosition} from './def_visitor'
 import * as fs from 'fs';
 import { IToken } from 'chevrotain';
 import { basename } from 'path';
@@ -281,7 +281,7 @@ documents.onDidChangeContent(change => {
 } */
 
 function validateFile(filePath: string, alsoImported?: boolean) {
-	let diagnostics: Diagnostic[] = [];
+	const diagnostics: Diagnostic[] = [];
 	checkDefinitions(filePath, diagnostics);
 	findParseErrors(filePath, diagnostics);
 	checkImports(filePath, diagnostics);
@@ -309,7 +309,7 @@ function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 				diagnostics.push(diagnostic);
 			});
 		}
-	})
+	});
 	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
 }
 
@@ -342,7 +342,7 @@ function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 		// 	}
 		// });
 		// if(symbolTables.getParseErrors(filePath)?.length) {
-		handleParseErrors(symbolTables.getParseErrors(filePath) ?? []).forEach(d => {diagnostics.push(d)});
+		handleParseErrors(symbolTables.getParseErrors(filePath) ?? []).forEach(d => {diagnostics.push(d);});
 		// }
 	}
 	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
@@ -373,7 +373,7 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 					source: 'lama-lsp'
 				};
 				diagnostics.push(diagnostic);
-	})
+	});
 	pScope?.getArgResolves()?.forEach((argResolve) => {
 		const defScope = findDefScope(argResolve[0], filePath, symbolTables);
 		const defArgs = defScope?.getNArgs(argResolve[0]);
@@ -386,7 +386,7 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 			};
 			diagnostics.push(diagnostic);
 		}
-	})
+	});
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -545,7 +545,7 @@ connection.onHover(params => {
 				const definition = defScope.get(token.image);
 				if (definition && funArgs !== undefined) {
 					const comment = getHoveredInfo(symbolTables.getLexResult(ensurePath(definition?.uri))?.groups['comments'], definition?.range.start.line ?? 0);
-					let markdown: MarkupContent = {
+					const markdown: MarkupContent = {
 						kind: MarkupKind.Markdown,
 						value: [
 							'```lama',
@@ -591,8 +591,8 @@ connection.onRenameRequest(params => {
 						}
 					}
 				}
-				let edit: WorkspaceEdit = {};
-				let changes: { [uri: DocumentUri]: TextEdit[] } = {};
+				const edit: WorkspaceEdit = {};
+				const changes: { [uri: DocumentUri]: TextEdit[] } = {};
 				references.forEach(location => {
 					const tEdit: TextEdit = {range: location.range, newText: params.newName};
 					if(!changes[location.uri]) {
@@ -650,12 +650,12 @@ connection.onSignatureHelp(params => {
 const TOKEN_DEFAULTS: Set<string> = new Set(["if", "case"]);
 
 function handleDefaultToken(token: string): CompletionItem {
-	let suggestion: CompletionItem = { label: token+'-expression' };
+	const suggestion: CompletionItem = { label: token+'-expression' };
 	if(token == 'if') {
 		suggestion.insertText = "if _ then _ else _ fi";
 	}
 	if(token == 'case') {
-		suggestion.insertText = "case _ of \n _ -> _ \n esac"
+		suggestion.insertText = "case _ of \n _ -> _ \n esac";
 	}
 	return suggestion;
 }

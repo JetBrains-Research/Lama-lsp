@@ -62,7 +62,7 @@ export function findLamaFiles(calledPath: string = STD_LIB_PATH): string[] {
 }
 
 export function findInterfaceFiles():string[] {
-    return [STD_LIB_PATH + "/Std.i"]
+    return [STD_LIB_PATH + "/Std.i"];
 } 
 
 const STD_LIB_PATH = pathFunctions.dirname(pathFunctions.dirname(process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "")) + "/share/Lama";

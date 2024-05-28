@@ -33,7 +33,7 @@ export class HoverVisitor extends ReferenceVisitor {
 	}
 
 	protected registerFArgs(ftoken: any, fargnode: CstNode, isPublic: boolean) {
-		let fargs: IToken[] = [];
+		const fargs: IToken[] = [];
 		collectTokensFromSubtree(fargnode, fargs);
 		if(isPublic) {
 			ftoken.scope.parent.addFArgs(ftoken.image, fargs.map(token => token.image));

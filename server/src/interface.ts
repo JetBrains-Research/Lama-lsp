@@ -11,5 +11,6 @@ export type Infix = Entity<'L' | 'R' | 'N'> & {
   other: string
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 export type InterfaceItem = Function | Variable | Import | Infix
 export type Interface = ArrayLike<InterfaceItem>

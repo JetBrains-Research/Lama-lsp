@@ -97,7 +97,7 @@ export function deactivate(): Thenable<void> | undefined {
 export async function getCExtensionAPI(): Promise<CExtensionAPI> {
 	const vscodeC = extensions.getExtension('ms-vscode.cpptools');
 	if (!vscodeC) {
-	  return Promise.resolve(undefined);
+		return Promise.resolve(undefined);
 	}
   
 	const api = await vscodeC.activate();

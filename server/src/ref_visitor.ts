@@ -4,8 +4,8 @@ import { AsPatternCstChildren, BasicExpressionCstChildren, FunctionDefinitionCst
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 import { findPublicScope, findScopeInFile } from './go-to-definition';
 
-const parser = new LamaParser()
-const LamaVisitorWithDefaults = parser.getBaseCstVisitorConstructorWithDefaults()
+const parser = new LamaParser();
+const LamaVisitorWithDefaults = parser.getBaseCstVisitorConstructorWithDefaults();
 
 export class ReferenceVisitor extends LamaVisitorWithDefaults {
 	
@@ -18,15 +18,15 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 
 	visit(node: any, param?: any) {
 		if(node === undefined) {
-		  return;
+			return;
 		}
 		else if(Array.isArray(node)) {
-		  node.forEach((element: any) => {
-			super.visit(element, param);
-		  });
+			node.forEach((element: any) => {
+				super.visit(element, param);
+			});
 		}
 		else {
-		  super.visit(node, param);
+			super.visit(node, param);
 		}
 	}
 	
@@ -55,7 +55,7 @@ export class ReferenceVisitor extends LamaVisitorWithDefaults {
 				);
 				const scope = findScopeInFile(token);
 				if(scope) {
-					let pScope = findPublicScope(token);
+					const pScope = findPublicScope(token);
 					if(token.nArgs !== undefined) {
 						if(scope.has(token.image)) {
 							const def_nArgs = scope.getNArgs(token.image);

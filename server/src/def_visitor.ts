@@ -22,14 +22,14 @@ export function getStartPosition(token: any /* IToken */): Position {
   return Position.create(
     token.startLine ? token.startLine - 1 : 0,
     token.startColumn ? token.startColumn - 1 : 0
-  )
+  );
 }
 
 export function getEndPosition(token: any /* IToken */): Position {
   return Position.create(
     token.endLine ? token.endLine - 1 : 0,
     token.endColumn ? token.endColumn : 0
-  )
+  );
 }
 
 function isCstNode(node: CstNode | IToken): node is CstNode {
@@ -52,8 +52,8 @@ function collectTokensFromSubtree(node: CstNode, tokens: IToken[]): void {
   }
 }
 
-const parser = new LamaParser()
-const BaseLamaVisitor = parser.getBaseCstVisitorConstructor()
+const parser = new LamaParser();
+const BaseLamaVisitor = parser.getBaseCstVisitorConstructor();
 
 export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisitor<Scope, void> {
 
@@ -63,8 +63,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
     public private_scope: Scope,
     private filecontent: string
   ) {
-    super()
-    this.validateVisitor()
+    super();
+    this.validateVisitor();
   }
 
   // filecontent = readFile(ensurePath(this.documentUri));
@@ -88,7 +88,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   protected registerScope(token: any[] | undefined, scope: Scope) {
     if (token) {
       for (let i = 0; i < token.length; i++) {
-        token[i].scope = scope
+        token[i].scope = scope;
         /* console.log(token[i].image) */
       }
     }
@@ -123,22 +123,22 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
   }
 
   compilationUnit(ctx: CompilationUnitCstChildren, scope: Scope) {
-    this.visit(ctx.scopeExpression, scope/* new Scope(scope) */)
+    this.visit(ctx.scopeExpression, scope/* new Scope(scope) */);
   }
 
   scopeExpression(ctx: ScopeExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.definition, scope)
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.definition, scope);
+    this.visit(ctx.expression, scope);
   }
 
   definition(ctx: DefinitionCstChildren, scope: Scope) {
-    this.visit(ctx.functionDefinition, scope)
-    this.visit(ctx.infixDefinition, scope)
-    this.visit(ctx.variableDefinition, scope)
+    this.visit(ctx.functionDefinition, scope);
+    this.visit(ctx.infixDefinition, scope);
+    this.visit(ctx.variableDefinition, scope);
   }
 
   functionDefinition(ctx: FunctionDefinitionCstChildren, scope: Scope) {
-    const identifierToken = ctx.LIdentifier[0]
+    const identifierToken = ctx.LIdentifier[0];
     if (ctx.Public && scope === this.private_scope) {
       this.public_scope.add(identifierToken.image, {
         range: Range.create(
@@ -147,7 +147,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         ),
         uri: this.documentUri,
         symboltype: CompletionItemKind.Function
-      })
+      });
     }
     else {
       scope.add(identifierToken.image, {
@@ -157,28 +157,28 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         ),
         uri: this.documentUri,
         symboltype: CompletionItemKind.Function
-      })
+      });
     }
 
-    this.registerScope(ctx.LIdentifier, scope)
+    this.registerScope(ctx.LIdentifier, scope);
     this.registerFArgs(ctx.LIdentifier[0], ctx.functionArguments[0], ctx.Public !== undefined);
     // ctx.functionArguments[0].children.pattern[0].location
-    const fScope = new Scope(scope)
-    this.visit(ctx.functionArguments, fScope)
-    this.visit(ctx.functionBody, fScope)
+    const fScope = new Scope(scope);
+    this.visit(ctx.functionArguments, fScope);
+    this.visit(ctx.functionBody, fScope);
   }
 
   functionArguments(ctx: FunctionArgumentsCstChildren, scope: Scope) {
-    this.visit(ctx.pattern, scope)
+    this.visit(ctx.pattern, scope);
   }
 
   functionBody(ctx: FunctionBodyCstChildren, scope: Scope) {
-    this.visit(ctx.scopeExpression, scope)
+    this.visit(ctx.scopeExpression, scope);
   }
 
   infixDefinition(ctx: InfixDefinitionCstChildren, scope: Scope) {
-    const operatorToken = ctx.Operator[0]
-    const identifier = operatorToken.image
+    const operatorToken = ctx.Operator[0];
+    const identifier = operatorToken.image;
     if (ctx.Public && scope === this.private_scope) {
       this.public_scope.add(identifier, {
         range: Range.create(
@@ -187,7 +187,7 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         ),
         uri: this.documentUri,
         symboltype: CompletionItemKind.Operator
-      })
+      });
     }
     else {
       scope.add(identifier, {
@@ -197,28 +197,28 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
         ),
         uri: this.documentUri,
         symboltype: CompletionItemKind.Operator
-      })
+      });
     }
 
-    this.registerScope(ctx.Operator, scope)
+    this.registerScope(ctx.Operator, scope);
     this.registerFArgs(ctx.Operator[0], ctx.functionArguments[0], ctx.Public !== undefined);
-    const iScope = new Scope(scope)
-    this.visit(ctx.functionArguments, iScope)
-    this.visit(ctx.functionBody, iScope)
+    const iScope = new Scope(scope);
+    this.visit(ctx.functionArguments, iScope);
+    this.visit(ctx.functionBody, iScope);
   }
 
   variableDefinition(ctx: VariableDefinitionCstChildren, scope: Scope) {
     if (ctx.Public && scope === this.private_scope) {
-      this.visit(ctx.variableDefinitionItem, this.public_scope)
+      this.visit(ctx.variableDefinitionItem, this.public_scope);
     }
     else {
-      this.visit(ctx.variableDefinitionItem, scope)
+      this.visit(ctx.variableDefinitionItem, scope);
     }
   }
 
   variableDefinitionItem(ctx: VariableDefinitionItemCstChildren, scope: Scope) {
-    const identifierToken = ctx.LIdentifier[0]
-    const identifier = identifierToken.image
+    const identifierToken = ctx.LIdentifier[0];
+    const identifier = identifierToken.image;
     scope.add(identifier, {
       range: Range.create(
         getStartPosition(identifierToken),
@@ -226,196 +226,197 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
       ),
       uri: this.documentUri,
       symboltype: CompletionItemKind.Variable
-    })
+    });
     if (scope === this.public_scope) {
       scope = this.private_scope;
     }
-    this.registerScope(ctx.LIdentifier, scope)
-    this.visit(ctx.basicExpression, scope)
+    this.registerScope(ctx.LIdentifier, scope);
+    this.visit(ctx.basicExpression, scope);
   }
 
   expression(ctx: ExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.basicExpression, scope)
-    this.visit(ctx.expression, scope)
-    this.visit(ctx.letInExpression, scope)
+    this.visit(ctx.basicExpression, scope);
+    this.visit(ctx.expression, scope);
+    this.visit(ctx.letInExpression, scope);
   }
 
   basicExpression(ctx: BasicExpressionCstChildren, scope: Scope) { // FIXME, all above is correct
-    this.registerScope(ctx.Operator, scope)
-    this.visit(ctx.postfixExpression, scope)
+    this.registerScope(ctx.Operator, scope);
+    this.visit(ctx.postfixExpression, scope);
   }
 
   postfixExpression(ctx: PostfixExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.primary, scope)
-    this.visit(ctx.postfix, scope)
-    this.countArgs(ctx.primary, ctx.postfix)
+    this.visit(ctx.primary, scope);
+    this.visit(ctx.postfix, scope);
+    this.countArgs(ctx.primary, ctx.postfix);
   }
 
   primary(ctx: PrimaryCstChildren, scope: Scope) { // TODO: Apply     
-    this.registerScope(ctx.LIdentifier, scope)
-    this.registerScope(ctx.Operator, scope)
-    const fScope = new Scope(scope)
-    this.visit(ctx.functionArguments, fScope)
-    this.visit(ctx.functionBody, fScope)
-    this.visit(ctx.listExpressionBody, scope)
-    this.visit(ctx.scopeExpression, scope)
-    this.visit(ctx.arrayExpression, scope)
-    this.visit(ctx.symbolExpression, scope)
-    this.visit(ctx.ifExpression, scope)
-    this.visit(ctx.whileDoExpression, scope)
-    this.visit(ctx.doWhileExpression, scope)
-    this.visit(ctx.forExpression, scope)
-    this.visit(ctx.caseExpression, scope)
-    this.visit(ctx.lazyExpression, scope)
-    this.visit(ctx.etaExpression, scope)
-    this.visit(ctx.syntaxExpression, scope)
+    this.registerScope(ctx.LIdentifier, scope);
+    this.registerScope(ctx.Operator, scope);
+    const fScope = new Scope(scope);
+    this.visit(ctx.functionArguments, fScope);
+    this.visit(ctx.functionBody, fScope);
+    this.visit(ctx.listExpressionBody, scope);
+    this.visit(ctx.scopeExpression, scope);
+    this.visit(ctx.arrayExpression, scope);
+    this.visit(ctx.symbolExpression, scope);
+    this.visit(ctx.ifExpression, scope);
+    this.visit(ctx.whileDoExpression, scope);
+    this.visit(ctx.doWhileExpression, scope);
+    this.visit(ctx.forExpression, scope);
+    this.visit(ctx.caseExpression, scope);
+    this.visit(ctx.lazyExpression, scope);
+    this.visit(ctx.etaExpression, scope);
+    this.visit(ctx.syntaxExpression, scope);
   }
 
   arrayExpression(ctx: ArrayExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.expression, scope);
   }
 
   listExpressionBody(ctx: ListExpressionBodyCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.expression, scope);
   }
 
   symbolExpression(ctx: SymbolExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.expression, scope);
   }
 
   ifExpression(ctx: IfExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
-    this.visit(ctx.scopeExpression, new Scope(scope))
-    this.visit(ctx.elsePart, scope)
+    this.visit(ctx.expression, scope);
+    this.visit(ctx.scopeExpression, new Scope(scope));
+    this.visit(ctx.elsePart, scope);
   }
 
   elsePart(ctx: ElsePartCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
-    this.visit(ctx.scopeExpression, new Scope(scope))
-    this.visit(ctx.elsePart, scope)
-    this.visit(ctx.scopeExpression, new Scope(scope))
+    this.visit(ctx.expression, scope);
+    this.visit(ctx.scopeExpression, new Scope(scope));
+    this.visit(ctx.elsePart, scope);
+    this.visit(ctx.scopeExpression, new Scope(scope));
   }
 
   whileDoExpression(ctx: WhileDoExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
-    this.visit(ctx.scopeExpression, new Scope(scope))
+    this.visit(ctx.expression, scope);
+    this.visit(ctx.scopeExpression, new Scope(scope));
   }
 
   doWhileExpression(ctx: DoWhileExpressionCstChildren, scope: Scope) {
-    const dwScope = new Scope(scope)
-    this.visit(ctx.scopeExpression, dwScope)
-    this.visit(ctx.expression, dwScope)
+    const dwScope = new Scope(scope);
+    this.visit(ctx.scopeExpression, dwScope);
+    this.visit(ctx.expression, dwScope);
   }
 
   forExpression(ctx: ForExpressionCstChildren, scope: Scope) {
-    const forScope = new Scope(scope)
-    this.visit(ctx.expression, forScope)
-    this.visit(ctx.scopeExpression, forScope)
+    const forScope = new Scope(scope);
+    this.visit(ctx.expression, forScope);
+    this.visit(ctx.scopeExpression, forScope);
   }
 
   letInExpression(ctx: LetInExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression[0], scope)
-    const firstScope = new Scope(scope)
-    this.visit(ctx.pattern[0], firstScope)
-    this.visit(ctx.expression[1], firstScope)
+    this.visit(ctx.expression[0], scope);
+    const firstScope = new Scope(scope);
+    this.visit(ctx.pattern[0], firstScope);
+    this.visit(ctx.expression[1], firstScope);
   }
 
   caseExpression(ctx: CaseExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
-    const firstScope = new Scope(scope)
-    this.visit(ctx.pattern[0], firstScope)
-    this.visit(ctx.scopeExpression[0], firstScope)
+    this.visit(ctx.expression, scope);
+    const firstScope = new Scope(scope);
+    this.visit(ctx.pattern[0], firstScope);
+    this.visit(ctx.scopeExpression[0], firstScope);
     for (let i = 1; i < ctx.scopeExpression.length; i++) {
-      const curScope = new Scope(scope)
-      this.visit(ctx.caseBranchPrefix?.[i - 1], curScope)
-      this.visit(ctx.scopeExpression[i], curScope)
+      const curScope = new Scope(scope);
+      this.visit(ctx.caseBranchPrefix?.[i - 1], curScope);
+      this.visit(ctx.scopeExpression[i], curScope);
     }
   }
 
   caseBranchPrefix(ctx: CaseBranchPrefixCstChildren, scope: Scope) {
-    this.visit(ctx.pattern, scope)
+    this.visit(ctx.pattern, scope);
   }
 
   lazyExpression(ctx: LazyExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.basicExpression, scope)
+    this.visit(ctx.basicExpression, scope);
   }
 
   etaExpression(ctx: EtaExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.basicExpression, scope)
+    this.visit(ctx.basicExpression, scope);
   }
 
   syntaxExpression(ctx: SyntaxExpressionCstChildren, scope: Scope) {
-    this.visit(ctx.syntaxSeq, scope)
+    this.visit(ctx.syntaxSeq, scope);
   }
 
   syntaxSeq(ctx: SyntaxSeqCstChildren, scope: Scope) {
-    this.visit(ctx.syntaxBinding, scope)
-    this.visit(ctx.scopeExpression, scope)
+    this.visit(ctx.syntaxBinding, scope);
+    this.visit(ctx.scopeExpression, scope);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   curlyScopeExpression(ctx: CurlyScopeExpressionCstChildren, scope: Scope): void {
-
+  
   }
 
   syntaxBinding(ctx: SyntaxBindingCstChildren, scope: Scope) {
-    this.visit(ctx.pattern, scope)
-    this.visit(ctx.syntaxPostfix, scope)
+    this.visit(ctx.pattern, scope);
+    this.visit(ctx.syntaxPostfix, scope);
   }
 
   syntaxPostfix(ctx: SyntaxPostfixCstChildren, scope: Scope) {
-    this.visit(ctx.syntaxPrimary, scope)
+    this.visit(ctx.syntaxPrimary, scope);
   }
 
   syntaxPrimary(ctx: SyntaxPrimaryCstChildren, scope: Scope) {
-    this.registerScope(ctx.LIdentifier, scope)
-    this.visit(ctx.expression, scope)
-    this.visit(ctx.syntaxSeq, scope)
+    this.registerScope(ctx.LIdentifier, scope);
+    this.visit(ctx.expression, scope);
+    this.visit(ctx.syntaxSeq, scope);
   }
 
   postfix(ctx: PostfixCstChildren, scope: Scope) {
-    this.registerScope(ctx.LIdentifier, scope)
-    this.visit(ctx.postfixCall, scope)
-    this.visit(ctx.postfixIndex, scope)
+    this.registerScope(ctx.LIdentifier, scope);
+    this.visit(ctx.postfixCall, scope);
+    this.visit(ctx.postfixIndex, scope);
   }
 
   postfixCall(ctx: PostfixCallCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.expression, scope);
   }
 
   postfixIndex(ctx: PostfixIndexCstChildren, scope: Scope) {
-    this.visit(ctx.expression, scope)
+    this.visit(ctx.expression, scope);
   }
 
   /// PATTERNS
 
   pattern(ctx: PatternCstChildren, scope: Scope) {
-    this.visit(ctx.simplePattern, scope)
-    this.visit(ctx.pattern, scope)
+    this.visit(ctx.simplePattern, scope);
+    this.visit(ctx.pattern, scope);
   }
 
   simplePattern(ctx: SimplePatternCstChildren, scope: Scope) {
-    this.visit(ctx.sExprPattern, scope)
-    this.visit(ctx.arrayPattern, scope)
-    this.visit(ctx.listPattern, scope)
-    this.visit(ctx.pattern, scope)
-    this.visit(ctx.asPattern, scope)
+    this.visit(ctx.sExprPattern, scope);
+    this.visit(ctx.arrayPattern, scope);
+    this.visit(ctx.listPattern, scope);
+    this.visit(ctx.pattern, scope);
+    this.visit(ctx.asPattern, scope);
   }
 
   sExprPattern(ctx: SExprPatternCstChildren, scope: Scope) {
-    this.visit(ctx.pattern, scope)
+    this.visit(ctx.pattern, scope);
   }
 
   arrayPattern(ctx: ArrayPatternCstChildren, scope: Scope) {
-    this.visit(ctx.pattern, scope)
+    this.visit(ctx.pattern, scope);
   }
 
   listPattern(ctx: ListPatternCstChildren, scope: Scope) {
-    this.visit(ctx.pattern, scope)
+    this.visit(ctx.pattern, scope);
   }
 
   asPattern(ctx: AsPatternCstChildren, scope: Scope) {
-    const identifierToken = ctx.LIdentifier[0]
-    const identifier = identifierToken.image
+    const identifierToken = ctx.LIdentifier[0];
+    const identifier = identifierToken.image;
     scope.add(identifier, {
       range: Range.create(
         getStartPosition(identifierToken),
@@ -423,8 +424,8 @@ export class DefinitionVisitor extends BaseLamaVisitor implements ICstNodeVisito
       ),
       uri: this.documentUri,
       symboltype: CompletionItemKind.Variable
-    })
-    this.registerScope(ctx.LIdentifier, scope)
-    this.visit(ctx.pattern, scope)
+    });
+    this.registerScope(ctx.LIdentifier, scope);
+    this.visit(ctx.pattern, scope);
   }
 }

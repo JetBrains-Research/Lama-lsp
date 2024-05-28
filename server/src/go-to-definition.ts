@@ -1,4 +1,5 @@
-import { SymbolTable, SymbolTables } from './SymbolTable'
+/* eslint-disable no-prototype-builtins */
+import { SymbolTable, SymbolTables } from './SymbolTable';
 import { DefaultScope as Scope, SymbolClass } from './Scope';
 import { CstNode, ILexingResult, IToken } from 'chevrotain';
 import { LamaParser } from './parser';
@@ -22,11 +23,11 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
         //     console.log(`Parse error in file ${filePath}: `, parser.errors);
         // }
 
-        let publicScope = new Scope();
-        let privateScope = new Scope(publicScope);
+        const publicScope = new Scope();
+        const privateScope = new Scope(publicScope);
         const defVisitor = new DefinitionVisitor('file://' + filePath, publicScope, privateScope, input);
         defVisitor.visit(initNode, privateScope);
-        let symbolTable = new SymbolTable(publicScope);
+        const symbolTable = new SymbolTable(publicScope);
         symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
 
         const refVisitor = new ReferenceVisitor('file://' + filePath);
@@ -35,10 +36,10 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
 /*         const hoverVisitor = new HoverVisitor('file://' + filePath);
         hoverVisitor.visit(initNode); */    
 
-        symbolTables.updateLexResult(filePath, parser.lexingResult)
+        symbolTables.updateLexResult(filePath, parser.lexingResult);
         symbolTables.updatePT(filePath, initNode);
         symbolTables.updateST(filePath, symbolTable);
-        addImportedBy(symbolTables, filePath)
+        addImportedBy(symbolTables, filePath);
     }
 }
 
@@ -51,14 +52,14 @@ export function setParseTree(symbolTables: SymbolTables, filePath: string, input
         const parser = new LamaParser();
         const initNode = parser.parse(input);
 
-        let publicScope = new Scope();
-        let symbolTable = new SymbolTable(publicScope);
+        const publicScope = new Scope();
+        const symbolTable = new SymbolTable(publicScope);
         symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
 
-        symbolTables.updateLexResult(filePath, parser.lexingResult)
+        symbolTables.updateLexResult(filePath, parser.lexingResult);
         symbolTables.updatePT(filePath, initNode);
         symbolTables.updateST(filePath, symbolTable);
-        addImportedBy(symbolTables, filePath)
+        addImportedBy(symbolTables, filePath);
     }
 }
 
@@ -179,12 +180,12 @@ export function computeFArgs(node: CstNode, offset: number): any /* IToken | und
 }
 
 export function getHoveredInfo(lexResult: IToken[] | undefined, line: number): string {
-	let hoveredInfo: string = '';
+	const hoveredInfo = '';
     if(lexResult && lexResult.length > 0) {
 		let max = lexResult?.length - 1;
 		let min = 0;
 		while(max - min > 0) {
-			let cur = Math.floor((max + min) / 2);
+			const cur = Math.floor((max + min) / 2);
 			if (lexResult[cur].endLine! < line) {
                 min = cur + 1;
             }
@@ -270,14 +271,14 @@ export function CSTtoVSRange(node: CstNode): Range {
     return {
         start: { line: node.location?.startLine ? node.location.startLine - 1 : 0, character: node.location?.startColumn ? node.location.startColumn - 1 : 0 },
         end: { line: node.location?.endLine ? node.location.endLine - 1 : 0, character: node.location?.endColumn ?? 0 }
-    }
+    };
 }
 
 export function ITokentoVSRange(token: IToken): Range {
     return {
         start: { line: token.startLine? token.startLine - 1 : 0, character: token.startColumn? token.startColumn - 1 : 0 },
         end: { line: token.endLine? token.endLine - 1 : 0, character: token.endColumn? token.endColumn : 0 }
-    }
+    };
 }
 
 
@@ -321,7 +322,7 @@ export function parseInterfaceFile(path: string): LocationDictionary {
     const input = readFile(path);
     const regex = /[,;]([^,;]+)[,;]/g;
     const identifiers: Set<string> = new Set();
-    let locations: LocationDictionary = {};
+    const locations: LocationDictionary = {};
     if(input) {
         let lineindex = 0;
         const lines = input.trim().split('\n');
@@ -330,7 +331,7 @@ export function parseInterfaceFile(path: string): LocationDictionary {
             let match;
             while ((match = regex.exec(line)) !== null) {
                 if (match[1]) {
-                    let id = match[1].trim();
+                    const id = match[1].trim();
                     if(id.startsWith('"') && id.endsWith('"')) {
                         identifiers.add(id.slice(1, -1));
                         locations[id.slice(1, -1)] = Location.create("file://" + path, 
@@ -363,7 +364,7 @@ function isIToken(token: CstNode | IToken): token is IToken {
     return 'image' in token;
 }
 
-function inside(offset: number, range: any/* CstNodeLocation | IToken */): Boolean {
+function inside(offset: number, range: any/* CstNodeLocation | IToken */): boolean {
     if (range.endOffset) {
         if (offset >= range.startOffset && offset <= range.endOffset + 1) {
             return true;
