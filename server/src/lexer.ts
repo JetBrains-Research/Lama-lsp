@@ -136,7 +136,6 @@ export const vocabulary = [
   Box,
   /* Boxed, */
   Let,
-  In,
   Case,
   Do,
   Elif,
@@ -152,6 +151,7 @@ export const vocabulary = [
   InfixL,
   InfixR,
   Infix,
+  In,
   Lazy,
   Length,
   /* Local, */
@@ -232,7 +232,6 @@ export default {
   Box,
   /* Boxed, */
   Let,
-  In,
   Case,
   Do,
   Elif,
@@ -248,6 +247,7 @@ export default {
   InfixL,
   InfixR,
   Infix,
+  In,
   Lazy,
   Length,
   /* Local, */
