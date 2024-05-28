@@ -78,5 +78,9 @@ export class SymbolTables {
   public getParseErrors (uri: string): IRecognitionException[] | undefined {
     return this.parseErrors[uri];
   }
+
+  public getSymbolTables (): {[uri: string]: SymbolTable} {
+    return this.symbolTables;
+  }
   
 }

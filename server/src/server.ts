@@ -21,7 +21,7 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs, collectNames } from './go-to-definition';
+import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs, collectNames, findFileWithName } from './go-to-definition';
 import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
 import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp, SymbolKind } from 'vscode-languageserver';
 import { SymbolTable, SymbolTables } from './SymbolTable';
@@ -86,7 +86,8 @@ connection.onInitialize((params: InitializeParams) => {
 			},
 			completionProvider: {
 				"resolveProvider" : false
-			}
+			},
+			codeActionProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -302,7 +303,8 @@ function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 					severity: DiagnosticSeverity.Error,
 					range: location.range,
 					message: `Cannot find name '` + name + `'.`,
-					source: 'lama-lsp'
+					source: 'lama-lsp',
+					data: name
 				};
 				diagnostics.push(diagnostic);
 			});
@@ -679,6 +681,37 @@ connection.onCompletion(params => {
 			// 	response.push(handleDefaultToken(token.image));
 			// }
 			return response;
+		}
+	}
+	return undefined;
+});
+
+connection.onCodeAction(params => {
+	if(params.context.diagnostics.length > 0) {
+		const name = params.context.diagnostics[0].data;
+		if(name) {
+			connection.workspace.getWorkspaceFolders().then((folders) => {
+					folders?.forEach((folder) => {
+						findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
+					});
+				});
+			// console.log(symbolTables);
+			const nameFilePath = findFileWithName(name, symbolTables);
+			const moduleFile = nameFilePath?.split('/').pop();
+			if(moduleFile) {
+				const moduleName = moduleFile.split('.')[0];
+				return [{title: `Add import of '${moduleName}' module?`,
+						 kind: 'quickfix',
+						 diagnostics: params.context.diagnostics,
+						 edit: {
+							changes: { // Example of a possible edit
+								[params.textDocument.uri]: [{
+									range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
+									newText: `import ${moduleName};\n`
+								}]
+							}
+						}}];
+			}
 		}
 	}
 	return undefined;

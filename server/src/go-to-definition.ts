@@ -85,6 +85,15 @@ export function findDefScope(name: string, path: string, symbolTables: SymbolTab
     return undefined;
 }
 
+export function findFileWithName(name: string, symbolTables: SymbolTables): string | undefined {
+    for (const filePath of Object.keys(symbolTables.getSymbolTables()) ) {
+        if(symbolTables.getST(filePath)?.publicScope.has(name)) {
+            return filePath;
+        }
+    }
+    return undefined;
+}
+
 export function collectNames(path: string, symbolTables: SymbolTables, scope?: Scope): {[name: string]: SymbolClass} {
     let names: {[name: string]: SymbolClass} = {};
     if (!scope) {
