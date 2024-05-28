@@ -230,7 +230,40 @@
                     "include": "#punctuation-semicolon"
                 },
                 {
+                    "include": "#letin-expression"
+                },
+                {
                     "include": "#basic-expression"
+                }
+            ]
+        },
+        "letin-expression": {
+            "name": "meta.expression.let-in.lama",
+            "begin": "\\b(let)\\b",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.let.lama"
+                }
+            },
+            "end": "\\b(in)\\b",
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.control.in.lama"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#pattern"
+                },
+                {
+                    "name": "keyword.operator.assignment.lama",
+                    "match": "="
+                },
+                {
+                    "include": "#expression"
                 }
             ]
         },
