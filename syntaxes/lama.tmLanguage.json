@@ -839,7 +839,7 @@
             },
             "patterns": [
                 {
-                    "include": "#expression"
+                    "include": "#scope-expression"
                 }
             ]
         },
