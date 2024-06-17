@@ -77,7 +77,7 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			referencesProvider: true,
 			documentHighlightProvider: true,
-			documentFormattingProvider: false,
+			documentFormattingProvider: true,
 			hoverProvider: true,
 			renameProvider: true,
 			signatureHelpProvider: {
@@ -351,7 +351,7 @@ function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 function checkImports(filePath: string, diagnostics: Diagnostic[]) {
 	const importNames = symbolTables.getPT(filePath)?.children['UIdentifier'];
 	importNames?.forEach(importToken => {
-		if(!fs.existsSync(findPath((importToken as IToken).image, filePath))) {
+		if(!fs.existsSync(findPath((importToken as IToken).image, filePath)) && !((importToken as IToken).image == 'Std')) {
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Error,
 				range: ITokentoVSRange(importToken as IToken),
@@ -523,10 +523,14 @@ connection.onDocumentFormatting(async(params) => {
 	const textDocument = documents.get(params.textDocument.uri);
     if (textDocument) {
 		const filePath = ensurePath(params.textDocument.uri);
-        const formattedText = formatTextDocument(textDocument.getText());
-        const newText = formattedText.join('\n');
-        const range = Range.create(Position.create(0, 0), Position.create(formattedText.length, 0));
-        return [TextEdit.replace(range, newText)];
+		let formattedText = "";
+		// console.log(symbolTables.getLexResult(filePath)?.groups['comments']);
+		const initNode = symbolTables.getPT(filePath);
+		if(initNode) {
+			formattedText = formatTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
+		}
+        const range = Range.create(Position.create(0, 0), Position.create(textDocument.getText().length, 0));
+        return [TextEdit.replace(range, formattedText)];
     }
 });
 
@@ -647,19 +651,6 @@ connection.onSignatureHelp(params => {
 	}
 });
 
-const TOKEN_DEFAULTS: Set<string> = new Set(["if", "case"]);
-
-function handleDefaultToken(token: string): CompletionItem {
-	const suggestion: CompletionItem = { label: token+'-expression' };
-	if(token == 'if') {
-		suggestion.insertText = "if _ then _ else _ fi";
-	}
-	if(token == 'case') {
-		suggestion.insertText = "case _ of \n _ -> _ \n esac";
-	}
-	return suggestion;
-}
-
 connection.onCompletion(params => {
 	const document = documents.get(params.textDocument.uri);
 	const filePath = ensurePath(params.textDocument.uri);
@@ -676,7 +667,7 @@ connection.onCompletion(params => {
 																					 insertText: ntype.symboltype == CompletionItemKind.Function ? name+'() {\n\n}' : name}));
 			}
 			response.push({label: 'if-expression', insertText: 'if _ then _ else _ fi', kind: CompletionItemKind.Keyword});
-			response.push({label: 'case-expression', insertText: 'case _ of \n   _ -> _ \nesac', kind: CompletionItemKind.Keyword});
+			response.push({label: 'case-expression', insertText: 'case _ of \n	_ -> _ \nesac', kind: CompletionItemKind.Keyword});
 			// if (TOKEN_DEFAULTS.has(token.image)) {
 			// 	response.push(handleDefaultToken(token.image));
 			// }
