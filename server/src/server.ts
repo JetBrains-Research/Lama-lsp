@@ -32,6 +32,7 @@ import { IToken } from 'chevrotain';
 import { basename } from 'path';
 import { connect } from 'http2';
 import { handleParseErrors } from './parse_errors';
+import { printTextDocument } from './printer_combinators/printing_visitor';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -527,7 +528,9 @@ connection.onDocumentFormatting(async(params) => {
 		// console.log(symbolTables.getLexResult(filePath)?.groups['comments']);
 		const initNode = symbolTables.getPT(filePath);
 		if(initNode) {
-			formattedText = formatTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
+			// console.log(collectVerticesByDistance(initNode));
+			// formattedText = formatTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
+			formattedText = printTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
 		}
         const range = Range.create(Position.create(0, 0), Position.create(textDocument.getText().length, 0));
         return [TextEdit.replace(range, formattedText)];
