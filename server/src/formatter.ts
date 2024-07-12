@@ -9,9 +9,7 @@ import type {
   DoWhileExpressionCstChildren, ForExpressionCstChildren, CaseExpressionCstChildren, LazyExpressionCstChildren, EtaExpressionCstChildren,
   SyntaxBindingCstChildren, SyntaxExpressionCstChildren, SyntaxSeqCstChildren, SyntaxPostfixCstChildren, SyntaxPrimaryCstChildren, PostfixCstChildren,
   PostfixIndexCstChildren, PatternCstChildren, SimplePatternCstChildren, SExprPatternCstChildren, ArrayPatternCstChildren, ListPatternCstChildren,
-  AsPatternCstChildren, CaseBranchPrefixCstChildren,/* , CaseBranchCstChildren */
-  CurlyScopeExpressionCstChildren, PrimaryCstNode, PostfixCstNode, FunctionArgumentsCstNode,
-  LetInExpressionCstChildren
+  AsPatternCstChildren, CaseBranchPrefixCstChildren, CurlyScopeExpressionCstChildren, LetInExpressionCstChildren
 } from './lama_cst';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 
