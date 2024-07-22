@@ -34,6 +34,20 @@ function chooseLineColumn(list_: F.T[]): F.T {
   }
 }
 
+function returnLineColumn(list_: F.T[]): [F.T, F.T] {
+  if(list_.length == 0) return [F.initial, F.initial];
+  else if(list_.length == 1) return [list_[0], list_[0]];
+  else {
+    let lineVariant = list_[0];
+    let columnVariant = list_[0];
+    for (let i = 1; i < list_.length; i++) {
+      lineVariant = F.bs(F.b(lineVariant, F.st(',')), list_[i]);
+      columnVariant = F.ab(F.b(columnVariant, F.st(',')), list_[i]);
+    }
+    return [lineVariant, columnVariant];
+  }
+}
+
 function prepareComments(rawComments: IToken[] | undefined): [number, string][] {
   const comments: [number, string][] = [];
   if(rawComments) {
@@ -70,6 +84,21 @@ export class PrintingVisitor extends BaseLamaVisitor implements ICstNodeVisitor<
     }
     const nodeText = super.visit(node);
     return commentList.length ? F.ab(F.st(commentList.join('\n')), nodeText) : nodeText;
+  }
+
+  extractComments(node: CstNode): F.T | undefined {
+    const commentList: string[] = []; 
+    if(node.location?.startLine && this.curIdx < this.N) {
+      while(this.curIdx < this.N && node.location.startLine > this.comments[this.curIdx][0]) {
+        commentList.push(this.comments[this.curIdx][1]);
+        this.curIdx += 1;
+      }
+    }
+    return commentList.length ? F.st(commentList.join('\n')) : undefined;
+  }
+
+  cleanVisit(node: CstNode): F.T { 
+    return super.visit(node);
   }
 
 	compilationUnit(ctx: CompilationUnitCstChildren) {
@@ -134,10 +163,11 @@ export class PrintingVisitor extends BaseLamaVisitor implements ICstNodeVisitor<
     const argFList = F.b(F.b(F.st('('), this.visit(ctx.functionArguments[0])), F.st(')'));
     funFList = F.bs(F.bs(funFList, argFList), F.st('{'));
     const scopeFList = this.visit(ctx.functionBody[0]);
-    return F.choose(
-      F.ab(F.ab(funFList, F.sr(3, scopeFList)), F.st('}')),
-      F.b(F.b(funFList, F.h(scopeFList, 1)), F.st('}'))
-    );
+    return F.ab(F.ab(funFList, F.sr(3, scopeFList)), F.st('}'));
+    // return F.choose(
+    //   F.ab(F.ab(funFList, F.sr(3, scopeFList)), F.st('}')),
+    //   F.b(F.b(funFList, F.h(scopeFList, 1)), F.st('}'))
+    // );
   }
 
   functionArguments(ctx: FunctionArgumentsCstChildren) {
@@ -183,7 +213,6 @@ export class PrintingVisitor extends BaseLamaVisitor implements ICstNodeVisitor<
 
     // v2
     const expVariables:string[] = [];
-    const expVList: F.T[] = [];
     const justVList: F.T[] = [];
     const expressions:BasicExpressionCstNode[] = [];
     ctx.variableDefinitionItem.forEach(vdef => {
@@ -195,26 +224,72 @@ export class PrintingVisitor extends BaseLamaVisitor implements ICstNodeVisitor<
         justVList.push(F.st(vdef.children.LIdentifier[0].image));
       }
     });
-    const max_len = Math.max(...expVariables.map(e => e.length));
-    for(let i = 0; i < expressions.length; i++) {
-      expVList.push(F.bs(F.bs(
-        F.st(expVariables[i].padEnd(max_len)),F.st('=')
-      ), this.visit(expressions[i])));
-    }
-
-    const justVPart = chooseLineColumn(justVList);
-    const expVPart = chooseLineColumn(expVList);
-    if(justVList.length > 0 && expressions.length > 0) {
-      return F.b(F.bs(varFList, F.choose(
-        F.bs(F.b(justVPart, F.st(',')), expVPart),
-        F.ab(F.b(justVPart, F.st(',')), expVPart)
-      )), F.st(';'));
-    }
-    else if(justVList.length > 0) {
-      return F.b(F.bs(varFList, justVPart), F.st(';'));
+    const [justVLine, justVColumn] = returnLineColumn(justVList);
+    if(expressions.length > 0) {
+      let linePossible = true;
+      let comment = this.extractComments(expressions[0]);
+      let exp = this.cleanVisit(expressions[0]);
+      const max_len = Math.max(...expVariables.map(e => e.length));
+      let expVColumn = F.initial;
+      let expVLine = F.initial;
+      if(comment != undefined) {
+        expVColumn = F.bs(F.bs(F.ab(comment,F.st(expVariables[0].padEnd(max_len))), F.st('=')), exp);
+        linePossible = false;
+        // expVLine = F.bs(F.bs(F.ab(comment,F.st(expVariables[0])), F.st('=')), exp);
+      }
+      else {
+        expVColumn = F.bs(F.bs(F.st(expVariables[0].padEnd(max_len)), F.st('=')), exp);
+        expVLine = F.bs(F.bs(F.st(expVariables[0]), F.st('=')), exp);
+      }
+      for(let i = 1; i < expressions.length; i++) {
+        comment = this.extractComments(expressions[i]);
+        exp = this.cleanVisit(expressions[i]);
+        if(comment != undefined) {
+          expVColumn = F.ab(F.b(expVColumn, F.st(',')), 
+                          F.bs(F.bs(F.ab(comment,F.st(expVariables[i].padEnd(max_len))),F.st('=')), exp)
+                        );
+          linePossible = false;
+          // expVLine = F.bs(F.b(expVLine, F.st(',')), 
+          //                 F.bs(F.bs(F.ab(comment,F.st(expVariables[i])),F.st('=')), exp)
+          //               );
+        }
+        else {
+          expVColumn = F.ab(F.b(expVColumn, F.st(',')), 
+                          F.bs(F.bs(F.st(expVariables[i].padEnd(max_len)),F.st('=')), exp)
+                        );
+          expVLine = F.bs(F.b(expVLine, F.st(',')), 
+                          F.bs(F.bs(F.st(expVariables[i]),F.st('=')), exp)
+                        );
+        }
+      }
+      if(justVList.length > 0) {
+        if(linePossible) {
+          return F.b(F.bs(varFList, 
+            F.choose(
+              F.bs(F.b(justVLine, F.st(',')), F.h(expVLine, 1)),
+              F.choose(
+                F.ab(F.b(justVLine, F.st(',')), expVColumn),
+                F.ab(F.b(justVColumn, F.st(',')), expVColumn)
+              )
+            )
+          ), F.st(';'));
+        }
+        else {
+          return F.b(F.bs(varFList, 
+              F.choose(
+                F.ab(F.b(justVLine, F.st(',')), expVColumn),
+                F.ab(F.b(justVColumn, F.st(',')), expVColumn)
+              )
+          ), F.st(';'));
+        }
+      }
+      else {
+        if(linePossible) return F.b(F.bs(varFList, F.choose(expVLine, expVColumn)), F.st(';'));
+        else return F.b(F.bs(varFList, expVColumn), F.st(';'));
+      }
     }
     else {
-      return F.b(F.bs(varFList, expVPart), F.st(';'));
+      return F.b(F.bs(varFList, F.choose(justVLine, justVColumn)), F.st(';'));
     }
   }
 
@@ -235,10 +310,11 @@ export class PrintingVisitor extends BaseLamaVisitor implements ICstNodeVisitor<
       const bexpFList = this.visit(ctx.basicExpression[0]);
       if(ctx.expression) {
         const expFList = this.visit(ctx.expression[0]);
-        return F.choose(
-          F.ab(F.b(bexpFList, F.st(';')), expFList),
-          F.bs(F.b(bexpFList, F.st(';')), F.h(expFList, 1))
-        );
+        return F.ab(F.b(bexpFList, F.st(';')), expFList);
+        // return F.choose(
+        //   F.ab(F.b(bexpFList, F.st(';')), expFList),
+        //   F.bs(F.b(bexpFList, F.st(';')), F.h(expFList, 1))
+        // );
       }
       else return bexpFList;
     }
@@ -464,17 +540,37 @@ export class PrintingVisitor extends BaseLamaVisitor implements ICstNodeVisitor<
   caseExpression(ctx: CaseExpressionCstChildren) {
     let cexpFList = F.bs(F.bs(F.st('case'), this.visit(ctx.expression[0])), F.st('of'));
     const patternList = [];
-    patternList.push(this.visit(ctx.pattern[0]));
-    ctx.caseBranchPrefix?.forEach(cb => patternList.push(this.visit(cb)));
-    const max_len = Math.max(...patternList.map(p=>F.toString(p).length));
+    const commentList = [];
+    commentList.push(this.extractComments(ctx.pattern[0]));
+    patternList.push(this.cleanVisit(ctx.pattern[0]));
+    ctx.caseBranchPrefix?.forEach(cb => {
+      commentList.push(this.extractComments(cb));
+      patternList.push(this.cleanVisit(cb));
+      });
+    const max_len = Math.max(...patternList.map(p => F.toString(p).length));
+    let pattern: F.T = F.initial;
+    const comment = commentList[0];
+    if(comment != undefined) {
+      pattern = F.sr(2, F.ab(comment, F.st(F.toString(patternList[0]).padEnd(max_len))));
+    }
+    else {
+      pattern = F.sr(2, F.st(F.toString(patternList[0]).padEnd(max_len)));
+    }
     cexpFList = F.bs(F.bs(F.ab(cexpFList, 
-                               F.sr(2, F.st(F.toString(patternList[0]).padEnd(max_len)))),
+                               pattern),
                           F.st('->')),
                      this.visit(ctx.scopeExpression[0]));
     if(ctx.caseBranchPrefix) {
       for(let i = 0; i < ctx.caseBranchPrefix.length; i++) {
+        const comment = commentList[i+1];
+        if(comment != undefined) {
+          pattern = F.bs(F.st('|'), F.ab(comment, F.st(F.toString(patternList[i+1]).padEnd(max_len))));
+        }
+        else {
+          pattern = F.bs(F.st('|'), F.st(F.toString(patternList[i+1]).padEnd(max_len)));
+        }
         cexpFList = F.bs(F.bs(F.ab(cexpFList, 
-                                   F.bs(F.st('|'), F.st(F.toString(patternList[i+1]).padEnd(max_len)))),
+                                   pattern),
                               F.st('->')),
                          this.visit(ctx.scopeExpression[i+1]));
       }

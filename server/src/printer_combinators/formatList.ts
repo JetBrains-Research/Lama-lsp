@@ -101,7 +101,11 @@ function shiftRight(shift: number, fs: T): T {
   };
 }
 
-const defaultWidth = 126;
+let defaultWidth = 126;
+
+export function updateDefaultWidth(x: number) {
+  defaultWidth = x;
+}
 
 const initial: T = {
   width: defaultWidth,
@@ -165,7 +169,7 @@ function choose(fs1: T, fs2: T): T {
 
 function pickBest(t: T): Format {
   if (t.lst.length === 0) {
-    throw new Error('Empty set of strings to choose from.');
+    throw new Error('Empty set of strings to choose from');
   }
   return t.lst.reduce((best, f) => (f.height < best.height ? f : best), t.lst[0]);
 }

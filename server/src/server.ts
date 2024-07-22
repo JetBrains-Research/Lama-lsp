@@ -22,17 +22,15 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { computeToken, findRecoveredNode, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs, collectNames, findFileWithName } from './go-to-definition';
+import { computeToken, findDefScope, findScopeInFile, setSymbolTable, removeImportedBy, addImportedBy, ITokentoVSRange, getHoveredInfo, parseInterfaceFile, LocationDictionary, setParseTree, computeFArgs, collectNames, findFileWithName } from './go-to-definition';
 import { ensurePath, findInterfaceFiles, findLamaFiles, findPath } from './path-utils';
-import { LocationLink, Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp, SymbolKind } from 'vscode-languageserver';
-import { SymbolTable, SymbolTables } from './SymbolTable';
-import { formatTextDocument } from './formatter';
+import { Location, TextEdit, Range, Position, MarkupContent, MarkupKind, WorkspaceEdit, DocumentUri, HandlerResult, SignatureHelpParams, SignatureHelp, SymbolKind } from 'vscode-languageserver';
+import { SymbolTables } from './SymbolTable';
 import * as fs from 'fs';
 import { IToken } from 'chevrotain';
-import { basename } from 'path';
-import { connect } from 'http2';
 import { handleParseErrors } from './parse_errors';
 import { printTextDocument } from './printer_combinators/printing_visitor';
+import { updateDefaultWidth } from './printer_combinators/formatList';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -131,13 +129,14 @@ connection.onInitialized(() => {
 
 // The example settings
 interface ExampleSettings {
-	maxNumberOfProblems: number;
+	maxNumberOfProblems: number,
+	maxFormatWidth: number;
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
-const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
+const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000, maxFormatWidth: 125 };
 let globalSettings: ExampleSettings = defaultSettings;
 
 // Cache the settings of all open documents
@@ -522,6 +521,9 @@ connection.onDocumentHighlight((params) => {
 
 connection.onDocumentFormatting(async(params) => {
 	const textDocument = documents.get(params.textDocument.uri);
+	const settings = await getDocumentSettings(params.textDocument.uri);
+	const width = settings.maxFormatWidth;
+	updateDefaultWidth(width);
     if (textDocument) {
 		const filePath = ensurePath(params.textDocument.uri);
 		let formattedText = "";
@@ -530,7 +532,12 @@ connection.onDocumentFormatting(async(params) => {
 		if(initNode) {
 			// console.log(collectVerticesByDistance(initNode));
 			// formattedText = formatTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
-			formattedText = printTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
+			try {
+				formattedText = printTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);	
+			} catch (error) {
+				connection.window.showErrorMessage(`Impossible to format the file with a maximum line width of ${width}. Try increasing the 'maxFormatWidth' setting.`);
+				return undefined;
+			}
 		}
         const range = Range.create(Position.create(0, 0), Position.create(textDocument.getText().length, 0));
         return [TextEdit.replace(range, formattedText)];

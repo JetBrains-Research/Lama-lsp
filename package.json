@@ -64,6 +64,11 @@
 					],
 					"default": "off",
 					"description": "Traces the communication between VS Code and the language server."
+				},
+				"languageServerLama.maxFormatWidth": {
+					"type": "number",
+					"default": 125,
+					"description": "Controls the maximum length of the line after formatting."
 				}
 			}
 		}
