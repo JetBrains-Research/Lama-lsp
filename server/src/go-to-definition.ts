@@ -7,8 +7,8 @@ import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
 import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
-import { Range, Position, MarkupContent, Location, SymbolKind } from 'vscode-languageserver';
-import { parse } from 'path';
+import { Range, MarkupContent, Location, SymbolKind } from 'vscode-languageserver';
+import { DiagnosticSeverity } from 'vscode-languageserver/node';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
     if (input === undefined) {
@@ -27,11 +27,32 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
         const privateScope = new Scope(publicScope);
         const defVisitor = new DefinitionVisitor('file://' + filePath, publicScope, privateScope, input);
         defVisitor.visit(initNode, privateScope);
-        const symbolTable = new SymbolTable(publicScope);
-        symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
+        // const symbolTable = new SymbolTable(publicScope);
+        // symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
 
         const refVisitor = new ReferenceVisitor('file://' + filePath);
         refVisitor.visit(initNode);
+        const defNames = privateScope.getRefNames();
+
+        for (const name of defNames) {
+            const locs = privateScope.getReferences(name);
+            if (locs?.length == 1) {
+                const r = locs[0].range;
+                const t = privateScope.get(name)?.symboltype == 3 ? 'Function' : 'Variable';
+                if(r) {
+                    publicScope.addUsageWarning({
+                                severity: DiagnosticSeverity.Warning,
+                                range: r,
+                                message: `${t} initialized, but never used.`,
+                                source: 'lama-lsp'
+                            });
+                }
+            }
+        }
+
+        const symbolTable = new SymbolTable(publicScope);
+        symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
+
 
 /*         const hoverVisitor = new HoverVisitor('file://' + filePath);
         hoverVisitor.visit(initNode); */    

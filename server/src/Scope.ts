@@ -1,5 +1,5 @@
 import { CompletionItemKind, Location, Range, SymbolKind } from 'vscode-languageserver';
-import { IToken } from 'chevrotain';
+import { Diagnostic } from 'vscode-languageserver/node';
 
 type ArgError = [Range, number, number];
 
@@ -27,6 +27,8 @@ export class AbstractScope<T> {
 	private readonly argErrors: ArgError[];
 
 	private readonly argResolves: ArgResolve[];
+
+	private readonly usageWarnings: Diagnostic[];
   
 	constructor (parent?: AbstractScope<T>) {
 		this.definitions = parent === undefined ? {} : Object.create(parent);
@@ -36,6 +38,7 @@ export class AbstractScope<T> {
 		this.argResolves = [];
 		this.parent = parent;
 		this.NArgs = {};
+		this.usageWarnings = [];
 	}
   
 	public get (identifier: string): T | undefined {
@@ -102,6 +105,14 @@ export class AbstractScope<T> {
 
 	public getArgResolves(): ArgResolve[] {
 		return this.argResolves;
+	}
+
+	public addUsageWarning(warning: Diagnostic): void {
+		this.usageWarnings.push(warning);
+	}
+
+	public getUsageWarnings(): Diagnostic[] {
+		return this.usageWarnings;
 	}
   }
 

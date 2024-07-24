@@ -286,6 +286,7 @@ function validateFile(filePath: string, alsoImported?: boolean) {
 	findParseErrors(filePath, diagnostics);
 	checkImports(filePath, diagnostics);
 	checkNumArgs(filePath, diagnostics);
+	findNonUsage(filePath, diagnostics);
 	if(diagnostics) {
 		connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics });
 	}
@@ -387,6 +388,11 @@ function checkNumArgs(filePath: string, diagnostics: Diagnostic[]) {
 			diagnostics.push(diagnostic);
 		}
 	});
+}
+
+function findNonUsage(filePath: string, diagnostics: Diagnostic[]) {
+	const pScope = symbolTables.getST(filePath)?.publicScope;
+	pScope?.getUsageWarnings()?.forEach(warning => diagnostics.push(warning));
 }
 
 connection.onDidChangeWatchedFiles(_change => {
