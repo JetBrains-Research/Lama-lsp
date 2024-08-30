@@ -62,3 +62,15 @@ Lsp server also supports file diagnostics for various language errors.
 3. If parser errors are encountered in the file, they are also handled and underlined. Among them: EOF error, Missing Token Error and Parser Rule Error (NoViableAltException and EarlyExitException)
 
 ![hippo](./gif/EOFerror.gif)
+
+- **Completion**
+
+The server provides basic completion functionality based on symbols available in the current scope, as well as some fundamental syntax constructions like the "if-else" statement.
+
+![hippo](./gif/completion.gif)
+
+- **Formatting**
+
+The server also supports code formatting (Ctrl+Shift+I by default). **Note:** This feature is not fully stable, especially when dealing with comments. If the server displays an error such as "Impossible to format with width 125," you can try increasing this parameter in the extension settings. However, this error often indicates an internal bug that caused the server to fail in formatting your file.
+
+![hippo](./gif/formatting.gif)

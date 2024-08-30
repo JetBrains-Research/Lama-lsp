@@ -3,7 +3,7 @@
 	"description": "Lama language server",
 	"author": "Savelev Artem",
 	"license": "MIT",
-	"version": "2.6.0",
+	"version": "2.7.0",
 	"publisher": "mrartemsav",
 	"categories": [
 		"Programming Languages"
