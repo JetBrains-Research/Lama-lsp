@@ -1,13 +1,12 @@
 /* eslint-disable no-prototype-builtins */
 import { SymbolTable, SymbolTables } from './SymbolTable';
 import { DefaultScope as Scope, SymbolClass } from './Scope';
-import { CstNode, ILexingResult, IToken } from 'chevrotain';
+import { CstNode, IToken } from 'chevrotain';
 import { LamaParser } from './parser';
 import { DefinitionVisitor } from './def_visitor';
 import { ReferenceVisitor } from './ref_visitor';
-import { HoverVisitor } from './hover';
 import { readFile, findPath } from './path-utils';
-import { Range, MarkupContent, Location, SymbolKind } from 'vscode-languageserver';
+import { Range, Location} from 'vscode-languageserver';
 import { DiagnosticSeverity } from 'vscode-languageserver/node';
 
 export function setSymbolTable(symbolTables: SymbolTables, filePath: string, input?: string): void {
@@ -19,16 +18,11 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
         const parser = new LamaParser();
         const initNode = parser.parse(input);
         symbolTables.updateParseErrors(filePath, parser.errors);
-        // if(parser.errors.length > 0) {
-        //     console.log(`Parse error in file ${filePath}: `, parser.errors);
-        // }
 
         const publicScope = new Scope();
         const privateScope = new Scope(publicScope);
         const defVisitor = new DefinitionVisitor('file://' + filePath, publicScope, privateScope, input);
         defVisitor.visit(initNode, privateScope);
-        // const symbolTable = new SymbolTable(publicScope);
-        // symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
 
         const refVisitor = new ReferenceVisitor('file://' + filePath);
         refVisitor.visit(initNode);
@@ -52,10 +46,6 @@ export function setSymbolTable(symbolTables: SymbolTables, filePath: string, inp
 
         const symbolTable = new SymbolTable(publicScope);
         symbolTable.imports = initNode.children.UIdentifier?.map((element) => (element as IToken).image);
-
-
-/*         const hoverVisitor = new HoverVisitor('file://' + filePath);
-        hoverVisitor.visit(initNode); */    
 
         symbolTables.updateLexResult(filePath, parser.lexingResult);
         symbolTables.updatePT(filePath, initNode);
@@ -123,7 +113,6 @@ export function collectNames(path: string, symbolTables: SymbolTables, scope?: S
     }
     while (scope !== undefined) {
         names = {...names, ... scope.getNames()};
-        // names.push(...scope.getNames());
         scope = scope.parent;
     }
     const imports = symbolTables.getST(path)?.imports;
@@ -133,7 +122,6 @@ export function collectNames(path: string, symbolTables: SymbolTables, scope?: S
             scope = symbolTables.getST(modulePath)?.publicScope;
             if (scope){
                 names = {...names, ... scope.getNames()};
-                // names.push(...scope.getNames());
             }
         }
     }
@@ -160,7 +148,7 @@ export function findPublicScope(token: any): Scope {
     return scope;
 }
 
-export function computeToken(node: /* any */ CstNode | undefined, offset: number): any /* IToken | undefined */ {
+export function computeToken(node: CstNode | undefined, offset: number): any /* IToken | undefined */ {
     if(node) {
         for (const key in node.children) {
             const element = node.children[key];
@@ -169,7 +157,7 @@ export function computeToken(node: /* any */ CstNode | undefined, offset: number
                     return computeToken((element[i] as CstNode), offset);
                 }
                 else {
-                    if (inside(offset, element[i]) && element[i].hasOwnProperty("image")/* && element[i].scope */) {
+                    if (inside(offset, element[i]) && element[i].hasOwnProperty("image")) {
                         return element[i];
                     }
                 }
@@ -184,7 +172,6 @@ export function computeFArgs(node: CstNode, offset: number): any /* IToken | und
         const element = node.children[key];
         for (let i = 0; i < element.length; i++) {
             if((element[i] as CstNode).name == "postfixCall" && inside(offset, (element[i] as CstNode).location)) {
-                // console.log('detected fArgs: ', element[i]);
                 return element[i];
             }
             if (element[i].hasOwnProperty("location") && inside(offset, (element[i] as CstNode).location)) {
@@ -227,27 +214,10 @@ export function getHoveredInfo(lexResult: IToken[] | undefined, line: number): s
 }
 
 export function findRecoveredNode(childNode: CstNode | IToken, parentNode?: CstNode | IToken): {n: CstNode, s: string}[] {
-    // const foundNodes: CstNode[] = [];
     const foundNodes: {n: any/*CstNode*/, s: string}[] = [];
 
-    // if (isCstNode(node) && node.recoveredNode) {
-    //     if (!hasRecoveredChildren(node)) {
-    //         foundNodes.push(node);
-    //     }
-    // }
-
-    // if (isCstNode(node) && node.children) {
-    //     for (const key in node.children) {
-    //         const childNodes = node.children[key].filter(isCstNode);
-    //         for (const childNode of childNodes) {
-    //             const childResult = findRecoveredNode(childNode);
-    //             foundNodes.push(...childResult);
-    //         }
-    //     }
-    // }
     if (isCstNode(childNode)) {
-        if (/* childNode.recoveredNode &&  */isNaN(childNode.location?.startOffset ?? 0)) {
-            // const breaker = findRecoveredChild(node);
+        if (isNaN(childNode.location?.startOffset ?? 0)) {
             foundNodes.push({n: parentNode, s: childNode.name});
         }
 
@@ -257,7 +227,6 @@ export function findRecoveredNode(childNode: CstNode | IToken, parentNode?: CstN
     
         else if (childNode.children) {
             for (const key in childNode.children) {
-                // const childNodes = node.children[key].filter(isCstNode);
                 for (const node of childNode.children[key]) {
                     const childResult = findRecoveredNode(node, childNode);
                     foundNodes.push(...childResult);
@@ -370,7 +339,6 @@ export function parseInterfaceFile(path: string): LocationDictionary {
             }
             lineindex+=1;
         });
-        // console.log(identifiers);
     } else {
         console.log("problem with reading path: " + path);
     }

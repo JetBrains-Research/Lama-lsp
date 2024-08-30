@@ -43,25 +43,6 @@ function filteri<T>(filterf: (index: number) => boolean, lst: T[]): T[] {
   return result;
 }
 
-// function factorize(lst: Format[]): Format[] {
-//   const flags = new Array(lst.length).fill(true);
-//   lst.forEach((f1, i1) => {
-//     if (flags[i1]) {
-//       lst.forEach((f2, i2) => {
-//         if (i1 < i2 && flags[i2]) {
-//           const comparison = compare(f1, f2);
-//           if (comparison < 0) {
-//             flags[i2] = false;
-//           } else if (comparison > 0) {
-//             flags[i1] = false;
-//           }
-//         }
-//       });
-//     }
-//   });
-//   return filteri((i) => flags[i], lst);
-// }
-
 function factorize(lst: Format[]): Format[] {
   const flags = new Array(lst.length).fill(true);
   lst.forEach((f1, i1) => {
@@ -127,7 +108,7 @@ function fromString(s: string): T {
 function filterByHeight(fs: T, n: number): T {
   return {
     width: fs.width,
-    lst: fs.lst.filter((f) => f.height < n + 1),//n + 1 instead of n?
+    lst: fs.lst.filter((f) => f.height < n + 1),
   };
 }
 
@@ -197,7 +178,7 @@ export {
   concatBesideWithSpace as bs,
   concatAboveT as ab,
   concatAboveWithBlankLine as abb,
-  concatFillT,
+  concatFillT as cf,
   choose,
   pickBest,
   toString,

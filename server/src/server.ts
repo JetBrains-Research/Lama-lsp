@@ -109,21 +109,9 @@ connection.onInitialized(() => {
 			connection.console.log('Workspace folder change event received.');
 		});
 	}
-	//TODO: cache these 2
 	findInterfaceFiles()?.forEach((filePath) => { LAMA_STD_DICT = parseInterfaceFile(filePath); });
 	LAMA_STD = new Set(Object.keys(LAMA_STD_DICT));
 	findLamaFiles()?.forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
-	// await connection.workspace.getWorkspaceFolders().then(async (folders) => {
-	// 	folders?.forEach((folder) => {
-	// 		findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
-	// 		// findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { setParseTree(symbolTables, filePath); });
-	// 	});
-	// });
-	// await connection.workspace.getWorkspaceFolders().then(async (folders) => {
-	// 	folders?.forEach((folder) => {
-	// 		findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { validateFile(filePath, false); });
-	// 	});
-	// });
 	connection.window.showInformationMessage('Initialization done.');
 });
 
@@ -176,10 +164,6 @@ documents.onDidClose(e => {
 	documentSettings.delete(e.document.uri);
 });
 
-/* function reparse(document: TextDocument) {
-	markForReparsing(document);
-	ensureParsed(document);
-} */
 connection.onNotification('fileRename', files => {
 	const oldPath = files.oldUri.path;
 	removeImportedBy(symbolTables, oldPath);
@@ -192,21 +176,9 @@ connection.onNotification('fileRename', files => {
 	}
 });
 
-// connection.window.showErrorMessage("Cannot find lamac file");
-
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	// const filePath = ensurePath(change.document.uri);
-	// setSymbolTable(symbolTables, filePath);
-	// symbolTables.getST(filePath)?.imports?.forEach(importName => {
-	// 	const importPath = findPath(importName, filePath);
-	// 	if(fs.existsSync(importPath)) {
-	// 		setSymbolTable(symbolTables, importPath);
-	// 	}
-	// });
-	// validateFile(filePath, true);
-
 	const filePath = ensurePath(change.document.uri);
 	setSymbolTable(symbolTables, filePath, change.document.getText());
 	symbolTables.getST(filePath)?.imports?.forEach(importName => {
@@ -215,70 +187,8 @@ documents.onDidChangeContent(change => {
 			setSymbolTable(symbolTables, importPath);
 		}
 	});
-	// console.log(symbolTables.getPT(filePath));
-	// connection.sendRequest('log_info', symbolTables.getPT(filePath));
 	validateFile(filePath, true);
-	/* console.log(symbolTables); */
 });
-
-// documents.onDidOpen(e => {
-// 	const filePath = ensurePath(e.document.uri);
-// 	setSymbolTable(symbolTables, filePath);
-// 	symbolTables.getST(filePath)?.imports?.forEach(importName => {
-// 		const importPath = findPath(importName, filePath);
-// 		if(fs.existsSync(importPath)) {
-// 			setSymbolTable(symbolTables, importPath);
-// 		}
-// 	});
-// 	validateFile(filePath, true);
-// });
-
-/* async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	// In this simple example we get the settings for every validate run.
-	const settings = await getDocumentSettings(textDocument.uri);
-
-	// The validator creates diagnostics for all uppercase words length 2 and more
-	const text = textDocument.getText();
-	const pattern = /\b[A-Z]{2,}\b/g;
-	let m: RegExpExecArray | null;
-
-	let problems = 0;
-	const diagnostics: Diagnostic[] = [];
-	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
-		problems++;
-		const diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Warning,
-			range: {
-				start: textDocument.positionAt(m.index),
-				end: textDocument.positionAt(m.index + m[0].length)
-			},
-			message: `${m[0]} is all uppercase.`,
-			source: 'ex'
-		};
-		if (hasDiagnosticRelatedInformationCapability) {
-			diagnostic.relatedInformation = [
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Spelling matters'
-				},
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Particularly for names'
-				}
-			];
-		}
-		diagnostics.push(diagnostic);	
-	}
-
-	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-} */
 
 function validateFile(filePath: string, alsoImported?: boolean) {
 	const diagnostics: Diagnostic[] = [];
@@ -311,42 +221,13 @@ function checkDefinitions(filePath: string, diagnostics: Diagnostic[]) {
 			});
 		}
 	});
-	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
 }
 
 function findParseErrors(filePath: string, diagnostics: Diagnostic[]) {
 	const initNode = symbolTables.getPT(filePath);
 	if (initNode) {
-		// findRecoveredNode(initNode)?.forEach(x => {
-		// 	const node = x.n;
-		// 	const name = x.s;
-		// 	if (node.location?.startLine) {
-		// 		const diagnostic: Diagnostic = {
-		// 			severity: DiagnosticSeverity.Error,
-		// 			range: {
-		// 				start: { line: node.location.startLine ? node.location.startLine - 1 : 0, character: node.location.startColumn ? node.location.startColumn - 1 : 0 },
-		// 				end: { line: node.location.endLine ? node.location.endLine - 1 : 0, character: node.location.endColumn ?? 0 }
-		// 			},
-		// 			// range: {
-		// 			// 	start: {line: 0, character: 0},
-		// 			// 	end: {line: 1, character: 1}
-		// 			// },
-		// 			// message: `Parse error. Was expected: ` + node.name,
-		// 			message: `Parse error in ${node.name}.` + (name.toUpperCase()[0] !== name[0] ? ` Was expected: ${name}` : ` Missing token: ${name}`),
-		// 			source: 'lama-lsp'
-		// 		};
-		// 		diagnostics.push(diagnostic);
-		// 	}
-		// 	else if(name.toUpperCase()[0] == name[0]) {
-		// 		connection.sendRequest('log_info', "found inserted token: " + name);
-		// 		connection.sendRequest('log_info', "its location: " + node.location);
-		// 	}
-		// });
-		// if(symbolTables.getParseErrors(filePath)?.length) {
 		handleParseErrors(symbolTables.getParseErrors(filePath) ?? []).forEach(d => {diagnostics.push(d);});
-		// }
 	}
-	/* connection.sendDiagnostics({ uri: 'file://' + filePath, diagnostics }); */
 }
 
 function checkImports(filePath: string, diagnostics: Diagnostic[]) {
@@ -400,56 +281,13 @@ connection.onDidChangeWatchedFiles(_change => {
 	connection.console.log('We received an file change event');
 });
 
-/* connection.onDidChangeTextDocument(change => {
-	connection.console.log(change.contentChanges.toString());
-}); */
-
-// This handler provides the initial list of the completion items.
-/* connection.onCompletion(
-	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-		// The pass parameter contains the position of the text document in
-		// which code complete got requested. For the example we ignore this
-		// info and always provide the same completion items.
-		return [
-			{
-				label: 'TypeScript',
-				kind: CompletionItemKind.Text,
-				data: 1
-			},
-			{
-				label: 'JavaScript',
-				kind: CompletionItemKind.Text,
-				data: 2
-			}
-		];
-	}
-); */
-
-// This handler resolves additional information for the item selected in
-// the completion list.
-/* connection.onCompletionResolve(
-	(item: CompletionItem): CompletionItem => {
-		if (item.data === 1) {
-			item.detail = 'TypeScript details';
-			item.documentation = 'TypeScript documentation';
-		} else if (item.data === 2) {
-			item.detail = 'JavaScript details';
-			item.documentation = 'JavaScript documentation';
-		}
-		return item;
-	}
-); */
-
 connection.onDefinition((params) => {
-	// console.log(symbolTables);
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
 	if (document !== undefined) {
 		const pos = params.position;
 		const offset = document.offsetAt(pos);
 		const path = ensurePath(uri);
-		// console.log(symbolTables.getPT(path));
-		// connection.sendRequest('log_info', symbolTables.getPT(path));
 		const initNode = symbolTables.getPT(path);
 		const token = computeToken(initNode, offset);
 		if (token && token.scope) {
@@ -462,7 +300,6 @@ connection.onDefinition((params) => {
 				}
 			} else if (LAMA_STD.has(token.image)) {
 				return LAMA_STD_DICT[token.image];
-				// return connection.sendRequest('runtimeDefinition', params);
 			}
 		}
 	}
@@ -533,11 +370,8 @@ connection.onDocumentFormatting(async(params) => {
     if (textDocument) {
 		const filePath = ensurePath(params.textDocument.uri);
 		let formattedText = "";
-		// console.log(symbolTables.getLexResult(filePath)?.groups['comments']);
 		const initNode = symbolTables.getPT(filePath);
 		if(initNode) {
-			// console.log(collectVerticesByDistance(initNode));
-			// formattedText = formatTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);
 			try {
 				formattedText = printTextDocument(initNode, filePath, symbolTables.getLexResult(filePath)?.groups['comments']);	
 			} catch (error) {
@@ -576,16 +410,10 @@ connection.onHover(params => {
 					};
 					return {
 						contents: markdown
-						// contents: `fun ${token?.image} (${funArgs}) \n${hoveredInfo.slice(2)}`,
 					};
 				}
 			}
 		}
-		/* if (token?.image) {
-            return {
-                contents: `Hovered: ${token?.image}` ,
-            };
-        } */
 	}
 	return undefined;
 });
@@ -628,13 +456,10 @@ connection.onRenameRequest(params => {
 	return undefined;
 });
 
-// let signatureConst = 0;
-
 connection.onSignatureHelp(params => {
 	const document = documents.get(params.textDocument.uri);
 	const filePath = ensurePath(params.textDocument.uri);
 	const activeSH = params.context?.activeSignatureHelp;
-	// console.log(params.context?.triggerCharacter, params.context?.triggerKind, params.context?.isRetrigger);
 	const pos = params.position;
 	if(document) {
 		const initNode = symbolTables.getPT(filePath);
@@ -680,13 +505,10 @@ connection.onCompletion(params => {
 				const sufficientNames = collectNames(filePath, symbolTables, token.scope);	
 				response = Object.entries(sufficientNames).map(([name, ntype]) => ({ label: name, 
 																					 kind: ntype.symboltype, 
-																					 insertText: ntype.symboltype == CompletionItemKind.Function ? name+'() {\n\n}' : name}));
+																					 insertText: ntype.symboltype == CompletionItemKind.Function ? name+'()' : name}));
 			}
 			response.push({label: 'if-expression', insertText: 'if _ then _ else _ fi', kind: CompletionItemKind.Keyword});
 			response.push({label: 'case-expression', insertText: 'case _ of \n	_ -> _ \nesac', kind: CompletionItemKind.Keyword});
-			// if (TOKEN_DEFAULTS.has(token.image)) {
-			// 	response.push(handleDefaultToken(token.image));
-			// }
 			return response;
 		}
 	}
@@ -702,7 +524,6 @@ connection.onCodeAction(params => {
 						findLamaFiles(ensurePath(folder.uri)).forEach((filePath) => { setSymbolTable(symbolTables, filePath); });
 					});
 				});
-			// console.log(symbolTables);
 			const nameFilePath = findFileWithName(name, symbolTables);
 			const moduleFile = nameFilePath?.split('/').pop();
 			if(moduleFile) {
@@ -723,12 +544,6 @@ connection.onCodeAction(params => {
 	}
 	return undefined;
 });
-
-// connection.onCompletionResolve(params => {
-// 	const document = documents.get(params.textDocument.uri);
-// 	const filePath = ensurePath(params.textDocument.uri);
-// 	return undefined;
-// });
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
