@@ -1,5 +1,5 @@
 {
-	"name": "LaMa-Edu-lsp",
+	"name": "LaMa-lsp",
 	"description": "Lama Language Server",
 	"contributors": [
 		{
@@ -10,8 +10,8 @@
 		}
 	],
 	"license": "MIT",
-	"version": "0.1.2",
-	"publisher": "lama-pltools",
+	"version": "2.7.2",
+	"publisher": "mrartemsav",
 	"categories": [
 		"Programming Languages"
 	],
