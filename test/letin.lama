@@ -1,0 +1,7 @@
+fun f (x) {}
+
+let Cons (x,y) = 5 in write(x); f (y);
+
+case Cons(5,Nil) of
+  t:tl -> f(x); t
+esac
