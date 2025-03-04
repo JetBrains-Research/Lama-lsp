@@ -14,7 +14,7 @@ export function readFile(filePath: string) {
 
 export function findPath(moduleName: string, filePath: string): string {
     const stdFilePath = STD_LIB_PATH + "/" + moduleName + ".lama";
-    if(fs.existsSync(stdFilePath)) {
+    if (fs.existsSync(stdFilePath)) {
         return stdFilePath;
     } else {
         return pathFunctions.dirname(filePath) + "/" + moduleName + ".lama";
@@ -22,23 +22,23 @@ export function findPath(moduleName: string, filePath: string): string {
 }
 
 export function ensurePath(path: string) {
-	if (path.startsWith("file:")) {
-		//Decode for Windows paths like /C%3A/...
-		let decoded = decodeURIComponent(fileUriToPath(path));
-		if(!decoded.startsWith("\\\\") && decoded.startsWith("\\")) {
-			//Windows doesn't seem to like paths like \C:\...
-			decoded = decoded.substring(1);
-		}
-		return decoded;
-	} else if(!pathFunctions.isAbsolute(path)) {
-		return pathFunctions.resolve(path);
-	} else {
-		return path;
-	}
+    if (path.startsWith("file:")) {
+        //Decode for Windows paths like /C%3A/...
+        let decoded = decodeURIComponent(fileUriToPath(path));
+        if (!decoded.startsWith("\\\\") && decoded.startsWith("\\")) {
+            //Windows doesn't seem to like paths like \C:\...
+            decoded = decoded.substring(1);
+        }
+        return decoded;
+    } else if (!pathFunctions.isAbsolute(path)) {
+        return pathFunctions.resolve(path);
+    } else {
+        return path;
+    }
 }
 
 export function findLamaFiles(calledPath: string = STD_LIB_PATH): string[] {
-    const lamaFiles:string[] = [];
+    const lamaFiles: string[] = [];
 
     function scanDirectory(currentPath: string) {
         const files = fs.readdirSync(currentPath);
@@ -61,8 +61,9 @@ export function findLamaFiles(calledPath: string = STD_LIB_PATH): string[] {
     return lamaFiles;
 }
 
-export function findInterfaceFiles():string[] {
+export function findInterfaceFiles(): string[] {
     return [STD_LIB_PATH + "/Std.i"];
-} 
+}
 
-const STD_LIB_PATH = pathFunctions.dirname(pathFunctions.dirname(process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "")) + "/share/Lama";
+// const STD_LIB_PATH = pathFunctions.dirname(pathFunctions.dirname(process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "")) + "/share/Lama";
+const STD_LIB_PATH = pathFunctions.dirname(pathFunctions.dirname(process.env.LAMAC_PATH ? process.env.LAMAC_PATH : "")) + "/share/Lama/x64";
